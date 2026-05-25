@@ -2456,7 +2456,7 @@ applyHintVisibility();
   let active = false;
   let lensX = 0, lensY = 0; // canvas座標系でのタッチ位置
 
-  // 元画像から直接切り出す方式のため、オフスクリーンcanvas不要
+
 
   function getCanvasPos(clientX, clientY){
     const rect = canvas.getBoundingClientRect();
@@ -2466,61 +2466,137 @@ applyHintVisibility();
     };
   }
 
+  // エフェクト用スナップショット（canvasと同じ実ピクセルサイズ）
+  const snapCanvas = document.createElement('canvas');
+  const snapCtx = snapCanvas.getContext('2d');
+
   function drawLens(){
     if(!active || !currentWave || !currentWave.ready || !currentWave.alive) return;
     const w = currentWave;
     if(!w.img.complete || w.img.naturalWidth===0) return;
 
     const cx = lensX, cy = lensY;
+    const dpr = window.devicePixelRatio || 1;
 
-    // 元画像から直接切り出して拡大（オフスクリーン経由せず高画質）
-    // canvas上でのタッチ位置 → 元画像上の対応位置
+    // ── ハイブリッド方式 ──────────────────────────────────────────────
+    // レイヤー1: 元画像から直接切り出し（高画質・スポットライト前の状態）
+    // レイヤー2: canvasスナップショットからエフェクト部分のみ合成
+    // （スポットライトマスク・スライム・パーティクル）
+
+    // 元画像→canvas座標の変換係数
     const imgScaleX = w.img.naturalWidth  / w.waveW;
     const imgScaleY = w.img.naturalHeight / w.h;
 
-    // 虫眼鏡の円の範囲 (LENS_R px) を元画像座標で表すと
-    const srcHalfW = (LENS_R / ZOOM) * imgScaleX;
-    const srcHalfH = (LENS_R / ZOOM) * imgScaleY;
-
-    // タッチ位置が画像上のどこに対応するか
+    // タッチ位置の元画像上の対応ピクセル
     const relX = (cx - w.waveX) / w.waveW;
     const relY = (cy - w.y)     / w.h;
     const imgCx = relX * w.img.naturalWidth;
     const imgCy = relY * w.img.naturalHeight;
 
-    // ソース矩形（クランプして画像範囲内に収める）
-    const sx = Math.max(0, imgCx - srcHalfW);
-    const sy = Math.max(0, imgCy - srcHalfH);
+    // 元画像から切り出す範囲（LENS_R/ZOOM px 分）
+    const srcHalfW = (LENS_R / ZOOM) * imgScaleX;
+    const srcHalfH = (LENS_R / ZOOM) * imgScaleY;
+    const sx  = Math.max(0, imgCx - srcHalfW);
+    const sy  = Math.max(0, imgCy - srcHalfH);
     const sx2 = Math.min(w.img.naturalWidth,  imgCx + srcHalfW);
     const sy2 = Math.min(w.img.naturalHeight, imgCy + srcHalfH);
     const sw = sx2 - sx, sh = sy2 - sy;
-
-    // 描画先（虫眼鏡の円の中心が cx,cy になるよう配置）
     const dw = sw / imgScaleX * ZOOM;
     const dh = sh / imgScaleY * ZOOM;
     const dx = cx - (imgCx - sx) / imgScaleX * ZOOM;
     const dy = cy - (imgCy - sy) / imgScaleY * ZOOM;
 
     ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     // 円クリップ
     ctx.beginPath();
     ctx.arc(cx, cy, LENS_R, 0, Math.PI*2);
     ctx.clip();
 
-    // 黒背景（心電図外の部分）
+    // ── レイヤー1: 元画像から高画質で直接描画 ──
     ctx.fillStyle = '#000008';
-    ctx.fill();
-
-    // 元画像から直接高画質描画（回転対応）
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    ctx.fill(); // 背景黒
     if(w.rot){
-      ctx.translate(cx, cy);
-      ctx.rotate(w.rot);
-      ctx.translate(-cx, -cy);
+      ctx.save();
+      ctx.translate(cx, cy); ctx.rotate(w.rot); ctx.translate(-cx, -cy);
     }
     ctx.drawImage(w.img, sx, sy, sw, sh, dx, dy, dw, dh);
+    if(w.rot) ctx.restore();
+
+    // ── レイヤー2: スポットライト暗闇マスクとスライムのみ合成 ──
+    // 心電図ピクセルは上書きせず、エフェクトのみを正確に重ねる
+    if(stageEffects && stageEffects.spotlight && spotlight){
+      // スポットライトの暗闇をレンズ内座標で再描画
+      // （元画像の高画質描画の上に暗闇だけを乗せる）
+      const spCx = cx + (spotlight.x - cx) * ZOOM;
+      const spCy = cy + (spotlight.y - cy) * ZOOM;
+      const spR  = spotlight.r * ZOOM;
+
+      // 暗闇レイヤー（心電図エリアをZOOM倍座標で覆う）
+      const darkX = cx + (w.waveX - cx) * ZOOM;
+      const darkY = cy + (w.y - cy) * ZOOM;
+      const darkW = w.waveW * ZOOM;
+      const darkH = w.h * ZOOM;
+
+      // 一時canvasで destination-out マスクを作る
+      const tmpC = document.createElement('canvas');
+      tmpC.width = LENS_R*2; tmpC.height = LENS_R*2;
+      const tmpX = tmpC.getContext('2d');
+
+      // 1) 暗闇で全体を塗る
+      tmpX.fillStyle = 'rgba(0,0,0,0.93)';
+      tmpX.fillRect(0, 0, LENS_R*2, LENS_R*2);
+
+      // 2) スポット位置をdestination-outで抜く（レンズ座標系に変換）
+      tmpX.globalCompositeOperation = 'destination-out';
+      const gSpot = tmpX.createRadialGradient(
+        spCx-cx+LENS_R, spCy-cy+LENS_R, 0,
+        spCx-cx+LENS_R, spCy-cy+LENS_R, spR
+      );
+      gSpot.addColorStop(0,    'rgba(0,0,0,1)');
+      gSpot.addColorStop(0.6,  'rgba(0,0,0,0.85)');
+      gSpot.addColorStop(0.85, 'rgba(0,0,0,0.3)');
+      gSpot.addColorStop(1,    'rgba(0,0,0,0)');
+      tmpX.beginPath();
+      tmpX.arc(spCx-cx+LENS_R, spCy-cy+LENS_R, spR, 0, Math.PI*2);
+      tmpX.fillStyle = gSpot;
+      tmpX.fill();
+
+      // 3) 心電図エリアのみにクリップして暗闇を合成
+      ctx.drawImage(tmpC, 0, 0, LENS_R*2, LENS_R*2,
+                    cx-LENS_R, cy-LENS_R, LENS_R*2, LENS_R*2);
+    }
+
+    // スライム: snapCanvasから乗算合成（心電図ピクセルに影響させない）
+    if(stageEffects && stageEffects.slime && slimes && slimes.length > 0){
+      // スライムはcanvas座標でのみ位置が分かるため
+      // スナップショットの該当領域だけをZOOM倍で重ねる
+      // ただし心電図ピクセルの上ではなくスライム部分のみ
+      // → スライムの座標が既知なので、スライム周辺のみsnap合成
+      for(const sl of slimes){
+        const slR = (sl.w || 40) * ZOOM * 0.6;
+        const slCx = cx + (sl.x - cx) * ZOOM;
+        const slCy = cy + (sl.y - cy) * ZOOM;
+        if(Math.abs(sl.x - cx) > LENS_R/ZOOM + sl.w/2) continue;
+        if(Math.abs(sl.y - cy) > LENS_R/ZOOM + sl.w/2) continue;
+        // スライムの円形領域をスナップから合成
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(slCx, slCy, slR, 0, Math.PI*2);
+        ctx.clip();
+        const ssx = Math.max(0,(sl.x - sl.w*0.6)*dpr);
+        const ssy = Math.max(0,(sl.y - sl.w*0.6)*dpr);
+        const ssw = sl.w*1.2*dpr, ssh = sl.w*1.2*dpr;
+        const sdx = cx + (sl.x - sl.w*0.6 - cx)*ZOOM;
+        const sdy = cy + (sl.y - sl.w*0.6 - cy)*ZOOM;
+        const sdw = sl.w*1.2*ZOOM, sdh = sl.w*1.2*ZOOM;
+        ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+        ctx.drawImage(snapCanvas, ssx, ssy, ssw, ssh, sdx, sdy, sdw, sdh);
+        ctx.restore();
+      }
+    }
 
     ctx.restore();
 
@@ -2541,8 +2617,19 @@ applyHintVisibility();
     ctx.fill();
   }
 
-  // gameLoop末尾から呼ばれるフック関数をグローバルに公開
-  window._magDrawLens = function(){ if(active) drawLens(); };
+  // gameLoop末尾から呼ばれるフック
+  window._magDrawLens = function(){
+    if(!active) return;
+    const hasEffects = stageEffects && (stageEffects.spotlight || stageEffects.slime);
+    if(hasEffects){
+      // エフェクトありの場合のみスナップショットを取る
+      snapCanvas.width  = canvas.width;
+      snapCanvas.height = canvas.height;
+      snapCtx.setTransform(1, 0, 0, 1, 0, 0);
+      snapCtx.drawImage(canvas, 0, 0);
+    }
+    drawLens();
+  };
 
   function startLens(clientX, clientY){
     if(!currentWave || !currentWave.ready || !currentWave.alive) return;
