@@ -372,6 +372,22 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
   transform:rotate(-20deg) scale(1.1);
 }
 #reset-btn:active{ transform:rotate(-40deg) scale(0.95); }
+
+/* 虫眼鏡オーバーレイ */
+#magnifier-overlay{
+  display:none;
+  position:absolute;
+  inset:0;
+  z-index:25;
+  background:#000;
+  cursor:zoom-out;
+  touch-action:none;
+}
+#magnifier-canvas{
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:100%;
+}
 </style>
 </head>
 <body>
@@ -385,6 +401,9 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
 
   <div id="ecg-area">
     <canvas id="canvas"></canvas>
+    <div id="magnifier-overlay">
+      <canvas id="magnifier-canvas"></canvas>
+    </div>
     <div id="hint-area">
       <div id="hint-stage"></div>
       <div id="hint-label">ヒ ン ト</div>
@@ -411,13 +430,6 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
       <img id="top-img" src="top.webp" alt="" onerror="this.style.display='none'">
       <button id="reset-btn" onclick="resetAllRecords()" title="記録をリセット">↺</button>
     </div>
-    <div id="overlay-desc">
-      <div class="desc-line">
-        <span class="desc-num">100</span><span class="desc-text"> 心電図 </span><span class="desc-num">7</span><span class="desc-text">メダル</span>
-      </div>
-    </div>
-    <br>
-    <br>
     <div id="medal-row">
       <div class="medal-wrap"><img src="medal1.webp" class="medal-img" id="medal1-img" alt="" onclick="onMedalClick(1)"><div class="medal-label">表面10クリア</div></div>
       <div class="medal-wrap"><img src="medal2.webp" class="medal-img" id="medal2-img" alt="" onclick="onMedalClick(2)"><div class="medal-label">表面30クリア</div></div>
@@ -470,7 +482,7 @@ const STAGE_DEFS = [
   { st:16, slime:false, spotlight:false, invert:true,    q:2, qRange:[1,100], slimeCount:0, label:'裏面',   head:'STAGE 7',    sub:'上下反転　心電図1〜100',                   color:'#8888ff' },
   { st:17, slime:true,  spotlight:false, invert:true,    q:2, qRange:[1,100], slimeCount:9, label:'裏面',   head:'STAGE 8',    sub:'上下反転　スライム9匹！',                  color:'#ff2266' },
   { st:18, slime:false, spotlight:true,  invert:true,    q:2, qRange:[1,100], slimeCount:0, label:'裏面',   head:'STAGE 9',    sub:'上下反転　スポットライト！',                color:'#ff4488' },
-  { st:19, slime:true,  spotlight:true,  invert:'rand',  q:2, qRange:[1,100], slimeCount:9, label:'鬼面',  head:'STAGE',      sub:'カオスを乗り越えろ！',     color:'#ff4400' },
+  { st:19, slime:true,  spotlight:true,  invert:'rand',  q:2, qRange:[1,100], slimeCount:9, label:'鬼面',  head:'STAGE',      sub:'最終試練　心電図カオス！',     color:'#ff4400' },
 ];
 const BASE_SPEED = 0.14;
 const ACCEL      = 0.018;
@@ -829,11 +841,11 @@ function resize(){
     // ヒントパネル位置も再調整
     const hintEl3 = document.getElementById('hint-area');
     if(hintEl3 && !hintEl3.classList.contains('hidden')){
-      const midY2 = heartY + (H - heartY) * 0.30;
       const panelH2 = hintEl3.offsetHeight || 80;
-      const clampedY2 = Math.min(midY2, H - panelH2 * 0.6);
+      const hintTop2 = heartY + (H - heartY) * 0.15;
+      const clampedY2 = Math.min(hintTop2, H - panelH2 - 4);
       hintEl3.style.top = clampedY2 + 'px';
-      hintEl3.style.transform = 'translateX(-50%) translateY(-50%)';
+      hintEl3.style.transform = 'translateX(-50%)';
     }
   }
 }
@@ -902,7 +914,7 @@ function spawnWave(q, resetDanger=false){
   img.onload=()=>{
     const ratio=img.naturalWidth/img.naturalHeight;
     // 心電図の高さをHの最大55%に制限（放電管・ハートが必ず収まるよう）
-    const maxEcgH = H * 0.55;
+    const maxEcgH = H * 0.62;
     const naturalH = W / ratio;
     const wh = Math.min(naturalH, maxEcgH);
     const ww = wh * ratio; // 高さ制限した場合は幅も調整
@@ -940,15 +952,15 @@ function spawnWave(q, resetDanger=false){
     // ハートは心電図右端の内側に確実に収まる位置
     heartX = ecgRight - hImgW / 2 - 4;
     // 放電管起点は心電図左端付近（drawDangerLine内で使用）
-    // ヒントパネルを放電線(heartY)と診断ボタンの中間に配置
+    // ヒントパネルを電離線(heartY)より下に配置（重ならないよう）
     const hintEl2 = document.getElementById('hint-area');
     if(hintEl2){
-      const midY = heartY + (H - heartY) * 0.30;
-      // パネルの高さを考慮してecg-area内に収まるよう上限を設ける
       const panelH = hintEl2.offsetHeight || 80;
-      const clampedY = Math.min(midY, H - panelH * 0.6);
+      // heartYから下の空間の中央にヒントを置く
+      const hintTop = heartY + (H - heartY) * 0.15;
+      const clampedY = Math.min(hintTop, H - panelH - 4);
       hintEl2.style.top = clampedY + 'px';
-      hintEl2.style.transform = 'translateX(-50%) translateY(-50%)';
+      hintEl2.style.transform = 'translateX(-50%)';
     }
     // 放電をリセット or 引き継ぎ
     if(resetDanger){
@@ -1596,6 +1608,9 @@ if(gameState !== 'gameover'){
   drawSpotlight();
 }
 
+  // 虫眼鏡を最後に重ね描き（gameLoopの上書きに対応）
+  if(typeof _magDrawLens === 'function') _magDrawLens();
+
   frameId=requestAnimationFrame(gameLoop);
 }
 
@@ -1820,33 +1835,15 @@ function drawWave(){
 
   // ===== 心電図本体 =====
   ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   if(w.rot){
-
-    ctx.translate(
-      w.waveX + w.waveW/2,
-      w.y + w.h/2
-    );
-
+    ctx.translate(w.waveX + w.waveW/2, w.y + w.h/2);
     ctx.rotate(w.rot);
-
-    ctx.drawImage(
-      w.img,
-      -w.waveW/2,
-      -w.h/2,
-      w.waveW,
-      w.h
-    );
-
+    ctx.drawImage(w.img, -w.waveW/2, -w.h/2, w.waveW, w.h);
   }else{
-
-    ctx.drawImage(
-      w.img,
-      w.waveX,
-      w.y,
-      w.waveW,
-      w.h
-    );
+    ctx.drawImage(w.img, w.waveX, w.y, w.waveW, w.h);
   }
 
   ctx.restore();
@@ -2450,6 +2447,142 @@ document.getElementById('hint-switch-row').addEventListener('click', (e)=>{
 
 // 初期適用
 applyHintVisibility();
+
+// ── 虫眼鏡機能 ────────────────────────────────────────────────────────────
+(function(){
+  const ZOOM = 3;          // 拡大倍率
+  const LENS_R = 90;       // 虫眼鏡の半径(px)
+  const BORDER = 3;        // 枠の太さ
+  let active = false;
+  let lensX = 0, lensY = 0; // canvas座標系でのタッチ位置
+
+  // 元画像から直接切り出す方式のため、オフスクリーンcanvas不要
+
+  function getCanvasPos(clientX, clientY){
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) * (W / rect.width),
+      y: (clientY - rect.top)  * (H / rect.height),
+    };
+  }
+
+  function drawLens(){
+    if(!active || !currentWave || !currentWave.ready || !currentWave.alive) return;
+    const w = currentWave;
+    if(!w.img.complete || w.img.naturalWidth===0) return;
+
+    const cx = lensX, cy = lensY;
+
+    // 元画像から直接切り出して拡大（オフスクリーン経由せず高画質）
+    // canvas上でのタッチ位置 → 元画像上の対応位置
+    const imgScaleX = w.img.naturalWidth  / w.waveW;
+    const imgScaleY = w.img.naturalHeight / w.h;
+
+    // 虫眼鏡の円の範囲 (LENS_R px) を元画像座標で表すと
+    const srcHalfW = (LENS_R / ZOOM) * imgScaleX;
+    const srcHalfH = (LENS_R / ZOOM) * imgScaleY;
+
+    // タッチ位置が画像上のどこに対応するか
+    const relX = (cx - w.waveX) / w.waveW;
+    const relY = (cy - w.y)     / w.h;
+    const imgCx = relX * w.img.naturalWidth;
+    const imgCy = relY * w.img.naturalHeight;
+
+    // ソース矩形（クランプして画像範囲内に収める）
+    const sx = Math.max(0, imgCx - srcHalfW);
+    const sy = Math.max(0, imgCy - srcHalfH);
+    const sx2 = Math.min(w.img.naturalWidth,  imgCx + srcHalfW);
+    const sy2 = Math.min(w.img.naturalHeight, imgCy + srcHalfH);
+    const sw = sx2 - sx, sh = sy2 - sy;
+
+    // 描画先（虫眼鏡の円の中心が cx,cy になるよう配置）
+    const dw = sw / imgScaleX * ZOOM;
+    const dh = sh / imgScaleY * ZOOM;
+    const dx = cx - (imgCx - sx) / imgScaleX * ZOOM;
+    const dy = cy - (imgCy - sy) / imgScaleY * ZOOM;
+
+    ctx.save();
+
+    // 円クリップ
+    ctx.beginPath();
+    ctx.arc(cx, cy, LENS_R, 0, Math.PI*2);
+    ctx.clip();
+
+    // 黒背景（心電図外の部分）
+    ctx.fillStyle = '#000008';
+    ctx.fill();
+
+    // 元画像から直接高画質描画（回転対応）
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    if(w.rot){
+      ctx.translate(cx, cy);
+      ctx.rotate(w.rot);
+      ctx.translate(-cx, -cy);
+    }
+    ctx.drawImage(w.img, sx, sy, sw, sh, dx, dy, dw, dh);
+
+    ctx.restore();
+
+    // 枠（グラデーション）
+    const grad = ctx.createRadialGradient(cx, cy, LENS_R - BORDER*3, cx, cy, LENS_R + BORDER);
+    grad.addColorStop(0, 'rgba(200,230,255,0.95)');
+    grad.addColorStop(1, 'rgba(60,140,255,0.3)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, LENS_R, 0, Math.PI*2);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = BORDER * 2;
+    ctx.stroke();
+
+    // ハイライト（レンズ感）
+    ctx.beginPath();
+    ctx.arc(cx - LENS_R*0.25, cy - LENS_R*0.3, LENS_R*0.25, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fill();
+  }
+
+  // gameLoop末尾から呼ばれるフック関数をグローバルに公開
+  window._magDrawLens = function(){ if(active) drawLens(); };
+
+  function startLens(clientX, clientY){
+    if(!currentWave || !currentWave.ready || !currentWave.alive) return;
+    const pos = getCanvasPos(clientX, clientY);
+    const w = currentWave;
+    // 心電図エリア内のみ
+    if(pos.x < w.waveX || pos.x > w.waveX + w.waveW ||
+       pos.y < w.y      || pos.y > w.y + w.h) return;
+    lensX = pos.x; lensY = pos.y;
+    active = true;
+  }
+
+  function moveLens(clientX, clientY){
+    if(!active) return;
+    const pos = getCanvasPos(clientX, clientY);
+    lensX = pos.x; lensY = pos.y;
+  }
+
+  function stopLens(){
+    active = false;
+  }
+
+  // マウス
+  canvas.addEventListener('mousedown', e=>{ startLens(e.clientX, e.clientY); });
+  canvas.addEventListener('mousemove', e=>{ moveLens(e.clientX, e.clientY); });
+  canvas.addEventListener('mouseup',   ()=>{ stopLens(); });
+  canvas.addEventListener('mouseleave',()=>{ stopLens(); });
+
+  // タッチ
+  canvas.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if(e.touches.length===1) startLens(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:false});
+  canvas.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    if(e.touches.length===1) moveLens(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:false});
+  canvas.addEventListener('touchend', e=>{ e.preventDefault(); stopLens(); }, {passive:false});
+})();
+
 </script>
 </body>
 </html>
