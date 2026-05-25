@@ -1815,24 +1815,6 @@ function drawWave(){
 
   if(!w.img.complete || w.img.naturalWidth===0) return;
 
-  // ===== 枠 =====
-  ctx.save();
-
-  ctx.shadowColor='#00ddff';
-  ctx.shadowBlur=12;
-
-  ctx.strokeStyle='rgba(0,200,255,0.3)';
-  ctx.lineWidth=1;
-
-  ctx.strokeRect(
-    w.waveX-1,
-    w.y-1,
-    w.waveW+2,
-    w.h+2
-  );
-
-  ctx.restore();
-
   // ===== 心電図本体 =====
   ctx.save();
   ctx.imageSmoothingEnabled = true;
@@ -1882,15 +1864,12 @@ function drawHint(){
   ctx.lineTo(bx - bw/2, by - bh/2 + r);
   ctx.arcTo(bx - bw/2, by - bh/2, bx - bw/2 + r, by - bh/2, r);
   ctx.closePath();
-  const grad = ctx.createLinearGradient(bx, by - bh/2, bx, by + bh/2);
-  grad.addColorStop(0, '#e03030');
-  grad.addColorStop(1, '#b01010');
-  ctx.fillStyle = grad;
-  ctx.shadowColor = 'rgba(180,0,0,0.6)';
-  ctx.shadowBlur = 12;
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
   ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.fillText(text, bx, by + 0.5);
   ctx.restore();
 }
@@ -2030,9 +2009,22 @@ function drawSpotlight(){
   oc.width = W; oc.height = H;
   const oc2 = oc.getContext('2d');
 
-  // 1) 暗闇で全体を塗りつぶす
+  // 1) 暗闇で全体を塗りつぶす（上下を少し広げてエッジを消す）
+  const pad = 20;
   oc2.fillStyle = 'rgba(0,0,0,0.93)';
-  oc2.fillRect(0, y0, W, wh);
+  oc2.fillRect(0, y0 - pad, W, wh + pad*2);
+  // 上端・下端をグラデーションでフェードアウトさせて境界線を消す
+  const gTop = oc2.createLinearGradient(0, y0 - pad, 0, y0 + 6);
+  gTop.addColorStop(0, 'rgba(0,0,0,0)');
+  gTop.addColorStop(1, 'rgba(0,0,0,0.93)');
+  oc2.globalCompositeOperation = 'source-over';
+  oc2.fillStyle = gTop;
+  oc2.fillRect(0, y0 - pad, W, pad + 6);
+  const gBot = oc2.createLinearGradient(0, y0 + wh - 6, 0, y0 + wh + pad);
+  gBot.addColorStop(0, 'rgba(0,0,0,0.93)');
+  gBot.addColorStop(1, 'rgba(0,0,0,0)');
+  oc2.fillStyle = gBot;
+  oc2.fillRect(0, y0 + wh - 6, W, pad + 6);
 
   // 2) スポット部分を destination-out で透明に抜く
   oc2.globalCompositeOperation = 'destination-out';
@@ -2488,8 +2480,10 @@ applyHintVisibility();
     const imgScaleY = w.img.naturalHeight / w.h;
 
     // タッチ位置の元画像上の対応ピクセル
-    const relX = (cx - w.waveX) / w.waveW;
-    const relY = (cy - w.y)     / w.h;
+    // 反転面では切り出し座標も反転（動きを合わせるため）
+    let relX = (cx - w.waveX) / w.waveW;
+    let relY = (cy - w.y)     / w.h;
+    if(w.rot){ relX = 1 - relX; relY = 1 - relY; }
     const imgCx = relX * w.img.naturalWidth;
     const imgCy = relY * w.img.naturalHeight;
 
@@ -2519,11 +2513,16 @@ applyHintVisibility();
     ctx.fillStyle = '#000008';
     ctx.fill(); // 背景黒
     if(w.rot){
+      // 反転面: レンズ中心(cx,cy)を軸に180度回転して描画
       ctx.save();
-      ctx.translate(cx, cy); ctx.rotate(w.rot); ctx.translate(-cx, -cy);
+      ctx.translate(cx, cy);
+      ctx.rotate(Math.PI);
+      ctx.translate(-cx, -cy);
+      ctx.drawImage(w.img, sx, sy, sw, sh, dx, dy, dw, dh);
+      ctx.restore();
+    } else {
+      ctx.drawImage(w.img, sx, sy, sw, sh, dx, dy, dw, dh);
     }
-    ctx.drawImage(w.img, sx, sy, sw, sh, dx, dy, dw, dh);
-    if(w.rot) ctx.restore();
 
     // ── レイヤー2: スポットライト暗闇マスクとスライムのみ合成 ──
     // 心電図ピクセルは上書きせず、エフェクトのみを正確に重ねる
@@ -2569,31 +2568,25 @@ applyHintVisibility();
                     cx-LENS_R, cy-LENS_R, LENS_R*2, LENS_R*2);
     }
 
-    // スライム: snapCanvasから乗算合成（心電図ピクセルに影響させない）
+    // スライム: 画像を直接ZOOM倍で描画（高画質・スナップ不使用）
     if(stageEffects && stageEffects.slime && slimes && slimes.length > 0){
-      // スライムはcanvas座標でのみ位置が分かるため
-      // スナップショットの該当領域だけをZOOM倍で重ねる
-      // ただし心電図ピクセルの上ではなくスライム部分のみ
-      // → スライムの座標が既知なので、スライム周辺のみsnap合成
       for(const sl of slimes){
-        const slR = (sl.w || 40) * ZOOM * 0.6;
+        if(Math.abs(sl.x - cx) > LENS_R/ZOOM + sl.w*1.5) continue;
+        if(Math.abs(sl.y - cy) > LENS_R/ZOOM + sl.w*1.5) continue;
+        const slImg = SLIME_IMGS[sl.key];
+        if(!slImg || !slImg.complete || slImg.naturalWidth===0) continue;
         const slCx = cx + (sl.x - cx) * ZOOM;
         const slCy = cy + (sl.y - cy) * ZOOM;
-        if(Math.abs(sl.x - cx) > LENS_R/ZOOM + sl.w/2) continue;
-        if(Math.abs(sl.y - cy) > LENS_R/ZOOM + sl.w/2) continue;
-        // スライムの円形領域をスナップから合成
+        const slW  = sl.w * ZOOM;
+        // wobbleスケールも反映
+        const scX = 1 + Math.sin(sl.wobble) * 0.08;
+        const scY = 1 - Math.sin(sl.wobble) * 0.06;
         ctx.save();
-        ctx.beginPath();
-        ctx.arc(slCx, slCy, slR, 0, Math.PI*2);
-        ctx.clip();
-        const ssx = Math.max(0,(sl.x - sl.w*0.6)*dpr);
-        const ssy = Math.max(0,(sl.y - sl.w*0.6)*dpr);
-        const ssw = sl.w*1.2*dpr, ssh = sl.w*1.2*dpr;
-        const sdx = cx + (sl.x - sl.w*0.6 - cx)*ZOOM;
-        const sdy = cy + (sl.y - sl.w*0.6 - cy)*ZOOM;
-        const sdw = sl.w*1.2*ZOOM, sdh = sl.w*1.2*ZOOM;
-        ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
-        ctx.drawImage(snapCanvas, ssx, ssy, ssw, ssh, sdx, sdy, sdw, sdh);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.translate(slCx, slCy);
+        ctx.scale(scX, scY);
+        ctx.drawImage(slImg, -slW/2, -slW/2, slW, slW);
         ctx.restore();
       }
     }
