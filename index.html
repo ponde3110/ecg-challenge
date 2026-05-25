@@ -463,26 +463,26 @@ const HINT_HIDE_LEVEL = 3;
 // hint:true=常時表示  slime/spotlight/invert:エフェクト  q:そのステージの問題数
 const STAGE_DEFS = [
   // ─ 表面 ST1〜10 ─
-  { st:1,  slime:false, spotlight:false, invert:false,   q:2, qRange:[1,10],  slimeCount:0, label:'表面',   head:'STAGE 1',    sub:'心電図1〜10',                          color:'#00ff88' },
-  { st:2,  slime:true,  spotlight:false, invert:false,   q:2, qRange:[1,10],  slimeCount:3, label:'表面',   head:'STAGE 2',    sub:'心電図1〜10　スライム3匹！',            color:'#88ffaa' },
-  { st:3,  slime:false, spotlight:true,  invert:false,   q:2, qRange:[1,10],  slimeCount:0, label:'表面',   head:'STAGE 3',    sub:'心電図1〜10　スポットライト！',         color:'#ffcc00' },
-  { st:4,  slime:false, spotlight:false, invert:false,   q:2, qRange:[1,30],  slimeCount:0, label:'表面',   head:'STAGE 4',    sub:'心電図1〜30',                          color:'#00ccff' },
-  { st:5,  slime:true,  spotlight:false, invert:false,   q:2, qRange:[1,30],  slimeCount:6, label:'表面',   head:'STAGE 5',    sub:'心電図1〜30　スライム6匹！',            color:'#88ffaa' },
-  { st:6,  slime:false, spotlight:true,  invert:false,   q:2, qRange:[1,30],  slimeCount:0, label:'表面',   head:'STAGE 6',    sub:'心電図1〜30　スポットライト！',         color:'#ffcc00' },
-  { st:7,  slime:false, spotlight:false, invert:false,   q:2, qRange:[1,100], slimeCount:0, label:'表面',   head:'STAGE 7',    sub:'心電図1〜100',                         color:'#00aaff' },
-  { st:8,  slime:true,  spotlight:false, invert:false,   q:2, qRange:[1,100], slimeCount:9, label:'表面',   head:'STAGE 8',    sub:'心電図1〜100　スライム9匹！',           color:'#ff9900' },
-  { st:9,  slime:false, spotlight:true,  invert:false,   q:2, qRange:[1,100], slimeCount:0, label:'表面',   head:'STAGE 9',    sub:'心電図1〜100　スポットライト！',        color:'#ffcc00' },
+  { st:1,  slime:false, spotlight:false, invert:false,   q:10, qRange:[1,10],  slimeCount:0, label:'表面',   head:'STAGE 1',    sub:'心電図1〜10',                          color:'#00ff88' },
+  { st:2,  slime:true,  spotlight:false, invert:false,   q:10, qRange:[1,10],  slimeCount:3, label:'表面',   head:'STAGE 2',    sub:'心電図1〜10　スライム3匹！',            color:'#88ffaa' },
+  { st:3,  slime:false, spotlight:true,  invert:false,   q:10, qRange:[1,10],  slimeCount:0, label:'表面',   head:'STAGE 3',    sub:'心電図1〜10　スポットライト！',         color:'#ffcc00' },
+  { st:4,  slime:false, spotlight:false, invert:false,   q:10, qRange:[1,30],  slimeCount:0, label:'表面',   head:'STAGE 4',    sub:'心電図1〜30',                          color:'#00ccff' },
+  { st:5,  slime:true,  spotlight:false, invert:false,   q:10, qRange:[1,30],  slimeCount:6, label:'表面',   head:'STAGE 5',    sub:'心電図1〜30　スライム6匹！',            color:'#88ffaa' },
+  { st:6,  slime:false, spotlight:true,  invert:false,   q:10, qRange:[1,30],  slimeCount:0, label:'表面',   head:'STAGE 6',    sub:'心電図1〜30　スポットライト！',         color:'#ffcc00' },
+  { st:7,  slime:false, spotlight:false, invert:false,   q:10, qRange:[1,100], slimeCount:0, label:'表面',   head:'STAGE 7',    sub:'心電図1〜100',                         color:'#00aaff' },
+  { st:8,  slime:true,  spotlight:false, invert:false,   q:10, qRange:[1,100], slimeCount:9, label:'表面',   head:'STAGE 8',    sub:'心電図1〜100　スライム9匹！',           color:'#ff9900' },
+  { st:9,  slime:false, spotlight:true,  invert:false,   q:10, qRange:[1,100], slimeCount:0, label:'表面',   head:'STAGE 9',    sub:'心電図1〜100　スポットライト！',        color:'#ffcc00' },
   // ─ 裏面 ST11〜20 ─
-  { st:10, slime:false, spotlight:false, invert:true,    q:2, qRange:[1,10],  slimeCount:0, label:'裏面',   head:'STAGE 1',    sub:'上下反転　心電図1〜10',                    color:'#ff88ff' },
-  { st:11, slime:true,  spotlight:false, invert:true,    q:2, qRange:[1,10],  slimeCount:3, label:'裏面',   head:'STAGE 2',    sub:'上下反転　スライム3匹！',                  color:'#cc88ff' },
-  { st:12, slime:false, spotlight:true,  invert:true,    q:2, qRange:[1,10],  slimeCount:0, label:'裏面',   head:'STAGE 3',    sub:'上下反転　スポットライト！',                color:'#ff66cc' },
-  { st:13, slime:false, spotlight:false, invert:true,    q:2, qRange:[1,30],  slimeCount:0, label:'裏面',   head:'STAGE 4',    sub:'上下反転　心電図1〜30',                    color:'#aa88ff' },
-  { st:14, slime:true,  spotlight:false, invert:true,    q:2, qRange:[1,30],  slimeCount:6, label:'裏面',   head:'STAGE 5',    sub:'上下反転　スライム6匹！',                  color:'#cc44ff' },
-  { st:15, slime:false, spotlight:true,  invert:true,    q:2, qRange:[1,30],  slimeCount:0, label:'裏面',   head:'STAGE 6',    sub:'上下反転　スポットライト！',                color:'#ff4488' },
-  { st:16, slime:false, spotlight:false, invert:true,    q:2, qRange:[1,100], slimeCount:0, label:'裏面',   head:'STAGE 7',    sub:'上下反転　心電図1〜100',                   color:'#8888ff' },
-  { st:17, slime:true,  spotlight:false, invert:true,    q:2, qRange:[1,100], slimeCount:9, label:'裏面',   head:'STAGE 8',    sub:'上下反転　スライム9匹！',                  color:'#ff2266' },
-  { st:18, slime:false, spotlight:true,  invert:true,    q:2, qRange:[1,100], slimeCount:0, label:'裏面',   head:'STAGE 9',    sub:'上下反転　スポットライト！',                color:'#ff4488' },
-  { st:19, slime:true,  spotlight:true,  invert:'rand',  q:2, qRange:[1,100], slimeCount:9, label:'鬼面',  head:'STAGE',      sub:'最終試練　心電図カオス！',     color:'#ff4400' },
+  { st:10, slime:false, spotlight:false, invert:true,    q:5, qRange:[1,10],  slimeCount:0, label:'裏面',   head:'STAGE 1',    sub:'上下反転　心電図1〜10',                    color:'#ff88ff' },
+  { st:11, slime:true,  spotlight:false, invert:true,    q:5, qRange:[1,10],  slimeCount:3, label:'裏面',   head:'STAGE 2',    sub:'上下反転　スライム3匹！',                  color:'#cc88ff' },
+  { st:12, slime:false, spotlight:true,  invert:true,    q:5, qRange:[1,10],  slimeCount:0, label:'裏面',   head:'STAGE 3',    sub:'上下反転　スポットライト！',                color:'#ff66cc' },
+  { st:13, slime:false, spotlight:false, invert:true,    q:5, qRange:[1,30],  slimeCount:0, label:'裏面',   head:'STAGE 4',    sub:'上下反転　心電図1〜30',                    color:'#aa88ff' },
+  { st:14, slime:true,  spotlight:false, invert:true,    q:5, qRange:[1,30],  slimeCount:6, label:'裏面',   head:'STAGE 5',    sub:'上下反転　スライム6匹！',                  color:'#cc44ff' },
+  { st:15, slime:false, spotlight:true,  invert:true,    q:5, qRange:[1,30],  slimeCount:0, label:'裏面',   head:'STAGE 6',    sub:'上下反転　スポットライト！',                color:'#ff4488' },
+  { st:16, slime:false, spotlight:false, invert:true,    q:5, qRange:[1,100], slimeCount:0, label:'裏面',   head:'STAGE 7',    sub:'上下反転　心電図1〜100',                   color:'#8888ff' },
+  { st:17, slime:true,  spotlight:false, invert:true,    q:5, qRange:[1,100], slimeCount:9, label:'裏面',   head:'STAGE 8',    sub:'上下反転　スライム9匹！',                  color:'#ff2266' },
+  { st:18, slime:false, spotlight:true,  invert:true,    q:5, qRange:[1,100], slimeCount:0, label:'裏面',   head:'STAGE 9',    sub:'上下反転　スポットライト！',                color:'#ff4488' },
+  { st:19, slime:true,  spotlight:true,  invert:'rand',  q:30, qRange:[1,100], slimeCount:9, label:'鬼面',  head:'STAGE',      sub:'最終試練　カオス30題！',     color:'#ff4400' },
 ];
 const BASE_SPEED = 0.14;
 const ACCEL      = 0.018;
@@ -1855,7 +1855,7 @@ function drawHint(){
   if(!currentWave || !currentWave.ready || !currentWave.alive) return;
   if(!stageEffects.invert) return;
   if(getStageDef().st === 19) return; // 鬼面は非表示
-  if(!hintUserVisible) return; // ヒント非表示時はバッジも隠す
+  // 裏面では「上下反転」バッジはヒント表示状態に関わらず常に表示
 
   const bx = W / 2;
   const by = currentWave.y + currentWave.h + 14;
