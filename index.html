@@ -215,7 +215,7 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
 #overlay-desc{
   flex-shrink:0;
   display:flex;flex-direction:column;align-items:stretch;gap:14px;
-  padding:5px 20px 8px;
+  padding:30px 20px 40px;
 }
   width:min(320px,88%);
 }
@@ -376,6 +376,11 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
       <img id="top-img" src="top.webp" alt="" onerror="this.style.display='none'">
       <button id="reset-btn" onclick="resetAllRecords()" title="記録をリセット">↺</button>
     </div>
+      <div id="overlay-desc">
+      <div class="desc-line">
+        <span class="desc-text">計 </span><span class="desc-num">100</span><span class="desc-text"> 心電図 </span><span class="desc-num">9</span><span class="desc-text"> メダル</span>
+      </div>
+    </div>
     <div id="medal-row">
       <div class="medal-wrap"><img src="medal1.webp" class="medal-img" id="medal1-img" alt="" onclick="onMedalClick(1)"><div class="medal-label">表面10クリア</div></div>
       <div class="medal-wrap"><img src="medal2.webp" class="medal-img" id="medal2-img" alt="" onclick="onMedalClick(2)"><div class="medal-label">表面30クリア</div></div>
@@ -391,6 +396,7 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
       <div class="medal-wrap"><img src="medal8.webp" class="medal-img" id="medal8-img" alt="" onclick="onMedalClick(8)"><div class="medal-label">鬼面30クリア</div></div>
       <div class="medal-wrap"><img src="medal9.webp" class="medal-img" id="medal9-img" alt="" onclick="onMedalClick(9)"><div class="medal-label">鬼面100クリア</div></div>
     </div>
+  
     <div id="overlay-bottom">
       <img id="start-btn" src="start.webp" alt="START" onclick="startGame()">
       <div style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1px;font-family:'Courier New',monospace;">© 2026 ponde3110</div>
@@ -437,9 +443,9 @@ const STAGE_DEFS = [
   { st:22, slime:false, spotlight:false, invert:'rand',  q:5, qRange:[1,30],  slimeCount:0, label:'鬼面', head:'STAGE 22', sub:'ヒントなし　心電図1〜30',              color:'#ff6600' },
   { st:23, slime:true,  spotlight:false, invert:'rand',  q:5, qRange:[1,30],  slimeCount:9, label:'鬼面', head:'STAGE 23', sub:'ヒントなし　スライム9匹！',            color:'#ff4400' },
   { st:24, slime:false, spotlight:true,  invert:'rand',  q:5, qRange:[1,30],  slimeCount:0, label:'鬼面', head:'STAGE 24', sub:'ヒントなし　小スポットライト！',       color:'#ff2200' },
-  { st:25, slime:false, spotlight:false, invert:'rand',  q:5, qRange:[1,100], slimeCount:0, label:'鬼面', head:'STAGE 25', sub:'ヒントなし　心電図1〜100',             color:'#ff6600' },
-  { st:26, slime:true,  spotlight:false, invert:'rand',  q:5, qRange:[1,100], slimeCount:12,label:'鬼面', head:'STAGE 26', sub:'ヒントなし　スライム12匹！',           color:'#ff4400' },
-  { st:27, slime:false, spotlight:true,  invert:'rand',  q:5, qRange:[1,100], slimeCount:0, label:'鬼面', head:'STAGE 27', sub:'ヒントなし　小スポットライト！',       color:'#cc0000' },
+  { st:25, slime:false, spotlight:false, invert:'rand',  q:1, qRange:[1,100], slimeCount:0, label:'鬼面', head:'STAGE 25', sub:'ヒントなし　心電図1〜100',             color:'#ff6600' },
+  { st:26, slime:true,  spotlight:false, invert:'rand',  q:1, qRange:[1,100], slimeCount:12,label:'鬼面', head:'STAGE 26', sub:'ヒントなし　スライム12匹！',           color:'#ff4400' },
+  { st:27, slime:false, spotlight:true,  invert:'rand',  q:1, qRange:[1,100], slimeCount:0, label:'鬼面', head:'STAGE 27', sub:'ヒントなし　小スポットライト！',       color:'#cc0000' },
 ];
 const BASE_SPEED = 0.14;
 const ACCEL      = 0.018;
@@ -460,7 +466,8 @@ function getStageDef(){
 function getStage(){ return getStageDef().st; }
 
 function waveSpeed(){
-  return BASE_SPEED; // 全ステージ一定速度
+  if(getStageDef().st === 19) return BASE_SPEED * 0.65; // 鬼面はやや遅く
+  return BASE_SPEED;
 }
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -603,6 +610,7 @@ let particles_arr=[];
 let currentWave=null, labelData=[], answered=false, usedIndices=[];
 let QUESTIONS=[];
 let slimes=[];         // スライム配列
+let _savedSlimes=[];   // 心電図消去時のスライム位置保存
 let resultMark=null;   // 正解/不正解マーク {type:'ok'|'ng', progress:0, done:false}
 let gameOverAnim=null; // ゲームオーバーアニメ {progress:0}
 let spotlight=null;    // スポットライト {x,y,tx,ty,r,moveTimer}
@@ -928,7 +936,7 @@ function spawnWave(q, resetDanger=false){
     // スポットライト
     if(stageEffects.spotlight){
       const isOni = getStageDef().st >= 19;
-      const sr = Math.min(W,currentWave.h)*0.36*1.5 * (isOni ? 0.75 : 1);
+      const sr = Math.min(W,currentWave.h)*0.36*1.5 * (isOni ? 0.6 : 1);
       spotlight={
         x: W*0.5, y: currentWave.y+currentWave.h*0.5,
         tx:W*0.5, ty:currentWave.y+currentWave.h*0.5,
@@ -937,11 +945,17 @@ function spawnWave(q, resetDanger=false){
     } else {
       spotlight=null;
     }
-    // スライム: 既存スライムを継続、0匹の時だけspawn（ステージアップ時はinitSlimesで別途リセット）
-    if(stageEffects.slime && slimes.length === 0){
-      spawnSlimes();
-    } else if(!stageEffects.slime){
+    // スライム: 保存位置があれば復元、なければ新規spawn
+    if(stageEffects.slime){
+      if(_savedSlimes.length > 0){
+        slimes = _savedSlimes.map(s=>({...s})); // 同位置で再開
+        _savedSlimes = [];
+      } else if(slimes.length === 0){
+        spawnSlimes();
+      }
+    } else {
       slimes=[];
+      _savedSlimes=[];
     }
   };
   img.src=q.img;
@@ -1114,54 +1128,57 @@ function onCorrect(lbl){
     // ─ メダル獲得判定（各ステージクリア後）─
     if(prevStage===3 && stageCleared){
       earnMedalAndCelebrate(1, 2, 'omote', ()=>{
-        stageQCount=0; slimes=[]; spotlight=null; particles_arr=[];
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
         showStageAnnounce(4, ()=>spawnWave(pickQuestion(), true));
       }); return;
     }
     if(prevStage===6 && stageCleared){
       earnMedalAndCelebrate(2, 3, 'omote', ()=>{
-        stageQCount=0; slimes=[]; spotlight=null; particles_arr=[];
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
         showStageAnnounce(7, ()=>spawnWave(pickQuestion(), true));
       }); return;
     }
     if(prevStage===9 && stageCleared){
       earnMedalAndCelebrate(3, 4, 'omote', ()=>{
-        stageQCount=0; slimes=[]; spotlight=null; particles_arr=[];
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
         showStageAnnounce(10, ()=>spawnWave(pickQuestion(), true));
       }); return;
     }
     if(prevStage===12 && stageCleared){
       earnMedalAndCelebrate(4, 5, 'ura', ()=>{
-        stageQCount=0; slimes=[]; spotlight=null; particles_arr=[];
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
         showStageAnnounce(13, ()=>spawnWave(pickQuestion(), true));
       }); return;
     }
     if(prevStage===15 && stageCleared){
       earnMedalAndCelebrate(5, 6, 'ura', ()=>{
-        stageQCount=0; slimes=[]; spotlight=null; particles_arr=[];
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
         showStageAnnounce(16, ()=>spawnWave(pickQuestion(), true));
       }); return;
     }
     if(prevStage===18 && stageCleared){
       earnMedalAndCelebrate(6, 7, 'ura', ()=>{
-        stageQCount=0; slimes=[]; spotlight=null; particles_arr=[];
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
         showStageAnnounce(19, ()=>spawnWave(pickQuestion(), true));
       }); return;
     }
     // 鬼面クリア判定（3段階）
     if(prevStage===21 && stageCleared){
       earnMedalAndCelebrate(7, 8, 'oni', ()=>{
-        stageQCount=0; slimes=[]; spotlight=null; particles_arr=[];
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
         showStageAnnounce(22, ()=>spawnWave(pickQuestion(), true));
       }); return;
     }
     if(prevStage===24 && stageCleared){
       earnMedalAndCelebrate(8, 9, 'oni', ()=>{
-        stageQCount=0; slimes=[]; spotlight=null; particles_arr=[];
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
         showStageAnnounce(25, ()=>spawnWave(pickQuestion(), true));
       }); return;
     }
-    if(prevStage===27 && stageCleared){
+    // ST27: 最終ステージ（questionCountが全q合計を超えるとstageCleared=falseになるため独自判定）
+    const st27Def = STAGE_DEFS.find(d => d.st === 27);
+    if(prevStage===27 && stageQCount >= (st27Def ? st27Def.q : 1)){
+      stageQCount = 0;
       earnMedalAndCelebrate(9, 10, 'oni', ()=>{ returnToTop(); });
       return;
     }
@@ -1244,16 +1261,85 @@ function startCelebration(type, cb, medalNum, btnNum){
   // 星キャッシュ（独自スクロール値を使用）
   let celebStarScroll = ecgStarScroll;
 
-  // 紙吹雪
+  // 紙吹雪 or 花火（medal9のみ花火）
   const colors = ['#ff4400','#ffaa00','#ffff00','#00ff88','#00ccff','#ff88ff','#ffffff'];
+  const isFinalMedal = (_mnum === 9);
   const confetti = [];
-  for(let i=0;i<180;i++){
-    confetti.push({
-      x:Math.random()*cW, y:-20-Math.random()*cH*0.5,
-      vx:(Math.random()-0.5)*4, vy:1.5+Math.random()*3.5,
-      r:4+Math.random()*6, color:colors[Math.floor(Math.random()*colors.length)],
-      rot:Math.random()*Math.PI*2, rotV:(Math.random()-0.5)*0.15
+  if(!isFinalMedal){
+    for(let i=0;i<180;i++){
+      confetti.push({
+        x:Math.random()*cW, y:-20-Math.random()*cH*0.5,
+        vx:(Math.random()-0.5)*4, vy:1.5+Math.random()*3.5,
+        r:4+Math.random()*6, color:colors[Math.floor(Math.random()*colors.length)],
+        rot:Math.random()*Math.PI*2, rotV:(Math.random()-0.5)*0.15
+      });
+    }
+  }
+
+  // 花火システム（medal9専用）
+  const fireworks = [];    // 爆発パーティクル
+  const rockets = [];      // 打ち上げロケット
+  let nextRocketTs = 200;
+  const FW_DURATION = 5000; // 5秒間
+
+  function launchRocket(){
+    const startX = cW * (0.1 + Math.random()*0.8);
+    const targetY = cH * (0.08 + Math.random()*0.35); // 爆発Y座標
+    const hue = Math.floor(Math.random()*360);
+    const spd = 10 + Math.random()*6;
+    rockets.push({
+      x:startX, y:cH, vx:0, vy:-spd, // まっすぐ上へ
+      targetY, hue, trail:[], exploded:false
     });
+  }
+
+  // 艶やかな花火カラーパレット
+  const FW_PALETTES = [
+    {main:[0,100,55],   sub:[60,100,65]},   // 深紅 × 黄金
+    {main:[120,100,45], sub:[60,100,70]},   // 濃緑 × 黄金
+    {main:[240,100,60], sub:[200,100,75]},  // 深青 × シアン
+    {main:[280,100,55], sub:[320,100,70]},  // 紫   × マゼンタ
+    {main:[30,100,55],  sub:[55,100,65]},   // 深橙 × 黄
+    {main:[170,100,45], sub:[130,100,65]},  // 深緑青 × 黄緑
+    {main:[350,100,55], sub:[20,100,65]},   // 深赤 × オレンジ
+    {main:[200,100,50], sub:[240,100,65]},  // 深青 × 紺青
+  ];
+
+  function explodeFirework(rx, ry, hue){
+    const palette = FW_PALETTES[Math.floor(Math.random()*FW_PALETTES.length)];
+    const [mH,mS,mL] = palette.main;
+    const [sH,sS,sL] = palette.sub;
+    const count = 100 + Math.floor(Math.random()*50);
+    const particles = [];
+    // メインリング（2色交互）
+    for(let i=0;i<count;i++){
+      const ang = (Math.PI*2/count)*i;
+      const spd = 3.5 + Math.random()*4.5;
+      const isMain = i % 2 === 0;
+      const [h,s,l] = isMain ? [mH+(Math.random()-0.5)*15, mS, mL+Math.random()*15]
+                              : [sH+(Math.random()-0.5)*15, sS, sL+Math.random()*15];
+      particles.push({
+        x:rx, y:ry,
+        vx:Math.cos(ang)*spd*(0.7+Math.random()*0.6),
+        vy:Math.sin(ang)*spd*(0.7+Math.random()*0.6),
+        life:1, decay:0.007+Math.random()*0.007,
+        hue:h, sat:s, lit:l,
+        r:2+Math.random()*2.5, type:'main'
+      });
+    }
+    // スパーク（白→パレット色に変化）
+    for(let i=0;i<35;i++){
+      const ang = Math.random()*Math.PI*2;
+      const spd = 1.5 + Math.random()*3;
+      particles.push({
+        x:rx, y:ry,
+        vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd,
+        life:1, decay:0.018+Math.random()*0.015,
+        hue:mH, sat:80, lit:92, r:1.2+Math.random()*1.8, type:'glitter'
+      });
+    }
+    fireworks.push({particles, done:false});
+    fireworks.push({flash:{x:rx,y:ry,hue:mH,r:70,life:1}, done:false});
   }
 
   let running = true;
@@ -1329,15 +1415,95 @@ function startCelebration(type, cb, medalNum, btnNum){
     cc.clearRect(0, 0, cW, cH);
     drawCelebBg();
 
-    // 紙吹雪
-    const ca = Math.max(0, 1 - elapsed/5000);
-    for(const c of confetti){
-      c.x+=c.vx; c.y+=c.vy; c.rot+=c.rotV;
-      if(c.y>cH+20){ c.y=-10; c.x=Math.random()*cW; }
-      cc.save(); cc.translate(c.x,c.y); cc.rotate(c.rot);
-      cc.fillStyle=c.color; cc.globalAlpha=ca;
-      cc.fillRect(-c.r/2,-c.r/2,c.r,c.r);
-      cc.restore();
+    if(isFinalMedal){
+      // ── 花火（5秒間） ──
+      if(elapsed < FW_DURATION && elapsed > nextRocketTs){
+        launchRocket();
+        nextRocketTs = elapsed + 350 + Math.random()*500;
+      }
+
+      // ロケット更新・描画
+      for(let i=rockets.length-1;i>=0;i--){
+        const rk = rockets[i];
+        if(rk.exploded){ rockets.splice(i,1); continue; }
+        rk.x += rk.vx; rk.y += rk.vy;
+        // 目標Y座標に達したら爆発
+        if(rk.y <= rk.targetY){
+          explodeFirework(rk.x, rk.targetY, rk.hue);
+          rockets.splice(i,1); continue;
+        }
+        // 軌跡
+        rk.trail.push({x:rk.x, y:rk.y});
+        if(rk.trail.length > 10) rk.trail.shift();
+        // 軌跡描画
+        for(let j=0;j<rk.trail.length;j++){
+          const a = j/rk.trail.length * 0.7;
+          cc.beginPath();
+          cc.arc(rk.trail[j].x, rk.trail[j].y, 1.5, 0, Math.PI*2);
+          cc.fillStyle = `hsla(${rk.hue},100%,88%,${a*0.9})`;
+          cc.fill();
+        }
+        // ロケット本体
+        cc.beginPath();
+        cc.arc(rk.x, rk.y, 3, 0, Math.PI*2);
+        cc.fillStyle = `hsla(${rk.hue},100%,90%,0.95)`;
+        cc.fill();
+      }
+
+      // 爆発パーティクル描画
+      for(const fw of fireworks){
+        if(fw.flash){
+          // フラッシュ
+          fw.flash.life -= 0.15;
+          if(fw.flash.life <= 0){ fw.done=true; continue; }
+          const fg = cc.createRadialGradient(fw.flash.x,fw.flash.y,0,fw.flash.x,fw.flash.y,fw.flash.r*(1-fw.flash.life+0.5));
+          fg.addColorStop(0, `hsla(${fw.flash.hue},100%,100%,${fw.flash.life})`);
+          fg.addColorStop(0.5, `hsla(${fw.flash.hue},100%,85%,${fw.flash.life*0.6})`);
+          fg.addColorStop(1, 'transparent');
+          cc.beginPath(); cc.arc(fw.flash.x,fw.flash.y,fw.flash.r,0,Math.PI*2);
+          cc.fillStyle=fg; cc.fill();
+          continue;
+        }
+        let allDead = true;
+        for(const p of fw.particles){
+          p.x += p.vx; p.y += p.vy;
+          p.vy += 0.05; // 重力
+          p.vx *= 0.98; p.vy *= 0.98;
+          p.life -= p.decay;
+          if(p.life <= 0) continue;
+          allDead = false;
+          cc.save();
+          const alpha = p.type==='glitter' ? Math.abs(Math.sin(p.life*20))*p.life : p.life*p.life;
+          cc.globalAlpha = alpha;
+          if(p.type==='glitter'){
+            // キラキラ
+            cc.fillStyle=`hsl(${p.hue},${p.sat}%,${p.lit}%)`;
+            cc.beginPath(); cc.arc(p.x,p.y,p.r,0,Math.PI*2); cc.fill();
+          } else {
+            // メインパーティクル（グラデーション）
+            const g = cc.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*2.5);
+            g.addColorStop(0, `hsla(${p.hue},${p.sat}%,${Math.min(100,p.lit+35)}%,1)`);
+            g.addColorStop(0.5, `hsla(${p.hue},${p.sat}%,${p.lit}%,0.8)`);
+            g.addColorStop(1, `hsla(${p.hue},${p.sat}%,${p.lit}%,0)`);
+            cc.beginPath(); cc.arc(p.x,p.y,p.r*2.5,0,Math.PI*2);
+            cc.fillStyle=g; cc.fill();
+          }
+          cc.restore();
+        }
+        if(allDead) fw.done = true;
+      }
+      for(let i=fireworks.length-1;i>=0;i--){ if(fireworks[i].done) fireworks.splice(i,1); }
+    } else {
+      // ── 紙吹雪 ──
+      const ca = Math.max(0, 1 - elapsed/5000);
+      for(const c of confetti){
+        c.x+=c.vx; c.y+=c.vy; c.rot+=c.rotV;
+        if(c.y>cH+20){ c.y=-10; c.x=Math.random()*cW; }
+        cc.save(); cc.translate(c.x,c.y); cc.rotate(c.rot);
+        cc.fillStyle=c.color; cc.globalAlpha=ca;
+        cc.fillRect(-c.r/2,-c.r/2,c.r,c.r);
+        cc.restore();
+      }
     }
 
     const fade = Math.min(1, elapsed/500);
@@ -1357,7 +1523,14 @@ function startCelebration(type, cb, medalNum, btnNum){
 
     const medalBottom = medalY + Math.min(cW*0.55,220) * 1.05;
     cc.shadowColor='#ffdd00'; cc.shadowBlur=16; cc.fillStyle='#ffee88';
-    cc.fillText(_mnum === 9 ? 'ECGエキスパート認定！' : 'メダル獲得！', cW/2, medalBottom + fs*1.1);
+    if(_mnum === 9){
+      cc.fillText('ECGチャレンジ完全制覇', cW/2, medalBottom + fs*1.1);
+      cc.shadowColor='#ffdd00'; cc.shadowBlur=20; cc.fillStyle='#ffe060';
+      cc.fillText('ECGエキスパート認定！', cW/2, medalBottom + fs*3.0);
+      cc.shadowBlur=0;
+    } else {
+      cc.fillText('メダル獲得！', cW/2, medalBottom + fs*1.1);
+    }
 
     cc.restore();
     if(elapsed > 2000) showBtn();
@@ -1464,6 +1637,8 @@ function onWrong(lbl){
   // 600ms待機して電離線が伸びるアニメを見せてから次へ
   const goOver = (targetDischargeX >= heartLeft - 5);
   setTimeout(()=>{
+    // スライム位置を保存（次の心電図で同位置から再開）
+    if(slimes.length > 0) _savedSlimes = slimes.map(s=>({...s}));
     if(currentWave) currentWave.alive=false;
     if(goOver){
       setTimeout(()=>gameOver(), 300);
@@ -1552,11 +1727,10 @@ updateHeartBeat(dt);
 
 drawBg();
 // updateAndDrawEcgShootingStars(dt); // 削除済み
-drawDangerLine();
-if(gameState !== 'gameover') drawWave();
-drawHeart();
-drawGoStateEffects();
+drawDangerLine();  // 放電管・電離線は常に表示
+drawHeart();       // 心臓は常に表示
 if(gameState !== 'gameover'){
+  drawWave();
   drawResultMark();
   drawHint();
   drawParticles();
@@ -1565,6 +1739,7 @@ if(gameState !== 'gameover'){
   updateSpotlight();
   drawSpotlight();
 }
+drawGoStateEffects();
 
   // 虫眼鏡を最後に重ね描き（gameLoopの上書きに対応）
   if(typeof _magDrawLens === 'function') _magDrawLens();
@@ -1659,7 +1834,7 @@ function drawGoStateEffects(){
     const imgW = Math.min(W * 0.7, gameoverImg.naturalWidth);
     const imgH = imgW * (gameoverImg.naturalHeight / gameoverImg.naturalWidth);
     const ix = (W - imgW) / 2;
-    const iy = heartY - imgH - 20;
+    const iy = heartY - imgH - 60;  // 少し上に
     ctx.drawImage(gameoverImg, ix, iy, imgW, imgH);
   } else {
     // フォールバック：テキスト
@@ -1671,6 +1846,32 @@ function drawGoStateEffects(){
     ctx.fillStyle = 'rgba(255,40,40,1)';
     ctx.fillText('GAME OVER', W/2, heartY - 50);
   }
+  // 「最終到達面」表示（放電線の下）
+  if(t > 2000){
+    const stDef = STAGE_DEFS.find(d => d.st === (typeof _lastStageAtGameOver !== 'undefined' ? _lastStageAtGameOver : 1));
+    if(stDef){
+      const faceLabel = stDef.st >= 19 ? '鬼面' : stDef.st > 9 ? '裏面' : '表面';
+      const dispNum   = stDef.st > 9 && stDef.st < 19 ? stDef.st - 9 : stDef.st;
+      const stageNum  = `　ステージ${dispNum}`;
+      const lineBreak = '\n';
+      const reachText1 = '最終到達';
+      const reachText2 = `${faceLabel}${stageNum}`;
+      const reachAlpha = Math.min(1, (t - 2000) / 600);
+      ctx.save();
+      ctx.globalAlpha = reachAlpha;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `bold ${Math.floor(W*0.062)}px "Helvetica Neue","Hiragino Sans",sans-serif`;
+      ctx.fillStyle = 'rgba(255,200,100,0.9)';
+      ctx.shadowColor = 'rgba(255,160,0,0.5)';
+      ctx.shadowBlur = 8;
+      const lineH = Math.floor(W*0.062) * 1.5;
+      ctx.fillText(reachText1, W/2, heartY + 90);
+      ctx.fillText(reachText2, W/2, heartY + 90 + lineH);
+      ctx.restore();
+    }
+  }
+
   ctx.restore();
 }
 function drawBg(){
@@ -2060,12 +2261,16 @@ function updateHUD(st){
 
 function gameOver(){
   gameState='gameover';
+  window._lastStageAtGameOver = getStageDef().st; // 到達ステージを保存
   stopCursor();
   // 不要な要素を即クリア・非表示
   labelsRow.innerHTML='';
   hintArea.classList.add('hidden');
   const cp = document.getElementById('control-panel');
   if(cp) cp.style.display = 'none';
+  // HUDを非表示
+  const uiGoEl = document.getElementById('ui');
+  if(uiGoEl) uiGoEl.style.display = 'none';
   slimes = [];
   spotlight = null;
   particles_arr = [];
@@ -2095,7 +2300,7 @@ function updateGoState(dt){
   }
 
   // 5秒後にトップへ
-  if(t > 5000 && !goState.done){
+  if(t > 8000 && !goState.done){
     goState.done = true;
     gameState = 'idle';
     ctx.clearRect(0,0,W,H);
@@ -2133,7 +2338,7 @@ function onMedalClick(num){
 
 
 function resetAllRecords(){
-  if(!confirm('すべての記録（メダル・進行状況）をリセットしますか？')) return;
+  if(!confirm('すべての記録をリセットしますか？')) return;
   for(let i=1;i<=9;i++) localStorage.removeItem(`medal${i}`);
   localStorage.removeItem('hintVisible');
   applyMedalState();
