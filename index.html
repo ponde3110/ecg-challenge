@@ -174,22 +174,6 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
   position:relative;z-index:1;
 }
 #hint-area.hidden{opacity:0;pointer-events:none;visibility:hidden;}
-/* 鬼面：ヒントパネルを暗く */
-#hint-area.oni-mode{
-  background:rgba(60,30,0,0.18);
-  border-left-color:rgba(255,100,0,0.25);
-  border-right-color:rgba(255,100,0,0.25);
-  box-shadow:0 0 10px rgba(180,60,0,0.08),0 2px 8px rgba(0,0,0,0.5),inset 0 0 10px rgba(120,40,0,0.06);
-}
-#hint-area.oni-mode::before{
-  background:linear-gradient(90deg,transparent,rgba(255,100,0,0.2),transparent);
-}
-#hint-area.oni-mode::after{
-  background:linear-gradient(90deg,transparent,rgba(255,80,0,0.12),transparent);
-}
-#hint-area.oni-mode #hint-label{
-  color:rgba(200,80,0,0.4);
-}
 #hint-stage{display:none;}
 
 /* Overlay */
@@ -815,7 +799,7 @@ function resize(){
     const hintEl3 = document.getElementById('hint-area');
     if(hintEl3 && !hintEl3.classList.contains('hidden')){
       const panelH2 = hintEl3.offsetHeight || 80;
-      const hintTop2 = heartY + (H - heartY) * 0.15;
+      const hintTop2 = heartY + (H - heartY) * 0.40;
       const clampedY2 = Math.min(hintTop2, H - panelH2 - 4);
       hintEl3.style.top = clampedY2 + 'px';
       hintEl3.style.transform = 'translateX(-50%)';
@@ -929,8 +913,8 @@ function spawnWave(q, resetDanger=false){
     const hintEl2 = document.getElementById('hint-area');
     if(hintEl2){
       const panelH = hintEl2.offsetHeight || 80;
-      // heartYから下の空間の中央にヒントを置く
-      const hintTop = heartY + (H - heartY) * 0.15;
+      // heartYから下の空間の40%位置にヒントを置く
+      const hintTop = heartY + (H - heartY) * 0.40;
       const clampedY = Math.min(hintTop, H - panelH - 4);
       hintEl2.style.top = clampedY + 'px';
       hintEl2.style.transform = 'translateX(-50%)';
@@ -979,13 +963,13 @@ function spawnWave(q, resetDanger=false){
     if(hintStageEl) hintStageEl.innerHTML = '';
 
     if(stageDef.st >= 19){
-      // 鬼面：「・・・」固定・暗めパネル
+      // 鬼面：「・・・」固定・通常パネル
       hintArea.classList.remove('hidden');
-      hintArea.classList.add('oni-mode');
+      hintArea.classList.remove('oni-mode');
       if(hintLbl) hintLbl.style.display = '';
       hintEl.style.display = '';
       hintEl.innerHTML = '・・・';
-      hintEl.style.color = 'rgba(180,70,0,0.5)';
+      hintEl.style.color = 'rgba(255,200,0,0.45)';
       hintEl.style.fontSize = '13px';
       // hint-area内の進捗バーがあれば削除
       const oldProg = hintArea.querySelector('.oni-progress');
@@ -1387,11 +1371,7 @@ function showStageAnnounce(stage, cb){
 
   // ステージ名を日本語で生成
   let stageName;
-  if(stage >= 19){
-    stageName = `最終ステージ ${stage-18}`;
-  } else {
-    stageName = `ステージ${stage}`;
-  }
+  stageName = `ステージ${stage}`;
 
   const prevState = gameState;
   gameState = 'paused';
@@ -1810,7 +1790,7 @@ function drawWave(){
 function drawHint(){
   if(!currentWave || !currentWave.ready || !currentWave.alive) return;
   if(!stageEffects.invert) return;
-  if(getStageDef().st === 19) return; // 鬼面は非表示
+  if(getStageDef().st >= 19) return; // 鬼面は非表示
   // 裏面では「上下反転」バッジはヒント表示状態に関わらず常に表示
 
   const bx = W / 2;
@@ -2054,7 +2034,7 @@ function updateHUD(st){
   const progBar   = document.getElementById('hud-progress-bar');
   if(st >= 19){
     if(faceDisp)  faceDisp.innerHTML = `<span style="color:#ff4400;text-shadow:0 0 8px rgba(255,80,0,0.8);">鬼面</span>`;
-    if(stageDisp) stageDisp.innerHTML = `<span style="color:#ff4400;text-shadow:0 0 8px rgba(255,80,0,0.8);">最終S ${st-18}</span>`;
+    if(stageDisp) stageDisp.innerHTML = `<span style="color:#ff4400;text-shadow:0 0 8px rgba(255,80,0,0.8);">ステージ${st}</span>`;
     if(progBar){ progBar.style.background = 'linear-gradient(90deg,#ff4400,#ff8800)'; progBar.style.boxShadow = '0 0 6px rgba(255,100,0,0.6)'; }
   } else if(st > 9){
     if(faceDisp)  faceDisp.innerHTML = `<span style="color:#ff88ff;text-shadow:0 0 8px rgba(255,100,255,0.5);">裏面</span>`;
