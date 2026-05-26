@@ -392,7 +392,7 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
       <div class="medal-wrap"><img src="medal9.webp" class="medal-img" id="medal9-img" alt="" onclick="onMedalClick(9)"><div class="medal-label">鬼面100クリア</div></div>
     </div>
     <div id="overlay-bottom">
-      <img id="start-btn" src="start1.webp" alt="START" onclick="startGame()">
+      <img id="start-btn" src="start.webp" alt="START" onclick="startGame()">
       <div style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1px;font-family:'Courier New',monospace;">© 2026 ponde3110</div>
     </div>
     <div id="overlay-disclaimer">
@@ -1102,9 +1102,10 @@ function onCorrect(lbl){
   updateHUD(prevStage);
   if(stageCleared) stageQCount = 0;
 
-  // 電離線: 全体の20%分後退（イージングアニメで縮む）
+  // 電離線: 正解で後退（鬼面は短縮量が半分）
   const _totalRange = (heartX - heartBaseSize) - dischargeMinX;
-  targetDischargeX = Math.max(dischargeMinX, dischargeX - _totalRange * 0.25);
+  const _correctRate = getStageDef().st >= 19 ? 0.125 : 0.25;
+  targetDischargeX = Math.max(dischargeMinX, dischargeX - _totalRange * _correctRate);
 
   // 600ms待機してアニメを見せてから次へ
   setTimeout(()=>{
@@ -1448,9 +1449,10 @@ function onWrong(lbl){
   // 不正解：放電が心臓に近づく（固定ピクセル）
   const heartLeft = heartX - heartBaseSize * 0.5;
   const heartLeft2 = heartX - heartBaseSize;
-  // 電離線: 全体の10%分前進
+  // 電離線: 不正解で前進（鬼面は1.5倍）
   const _totalRange2 = heartLeft2 - dischargeMinX;
-  const WRONG_ADVANCE = _totalRange2 * 0.15;
+  const _wrongRate = getStageDef().st >= 19 ? 0.225 : 0.15;
+  const WRONG_ADVANCE = _totalRange2 * _wrongRate;
   targetDischargeX = Math.min(heartLeft2 - 2, dischargeX + WRONG_ADVANCE);
   // 赤フラッシュパーティクル（即時）
   for(let i=0;i<30;i++){
@@ -1501,9 +1503,11 @@ function gameLoop(ts){
   const heartLeft = heartX - heartBaseSize;
   if(gameState==='playing' && currentWave && currentWave.alive && currentWave.ready){
     if(!answered){
-      // 未回答: 放電が右へ自然前進
-      dischargeX += currentWave.speed;
-      targetDischargeX += currentWave.speed;
+      // 未回答: 放電が右へ自然前進（鬼面は2倍速）
+      const isOni = getStageDef().st >= 19;
+      const advance = currentWave.speed * (isOni ? 2 : 1);
+      dischargeX += advance;
+      targetDischargeX += advance;
     } else {
       // 回答済み: targetDischargeXに向けてイージング（伸び縮みアニメ）
       const diff = targetDischargeX - dischargeX;
@@ -2135,7 +2139,7 @@ function resetAllRecords(){
   applyMedalState();
   // スタートボタンをstart1に戻す
   const btn = document.getElementById('start-btn');
-  if(btn) btn.src = 'start1.webp';
+  if(btn) btn.src = 'start.webp';
 }
 function applyMedalState(){
   [1,2,3,4,5,6,7,8,9].forEach(n=>{
