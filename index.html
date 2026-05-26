@@ -61,9 +61,9 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
   background:#ffffff;
   border:1px solid rgba(200,210,230,0.8);
   border-bottom:2px solid rgba(160,180,220,0.9);
-  border-radius:10px;padding:13px 16px;
+  border-radius:10px;padding:11px 16px;
   white-space:normal;word-break:break-all;width:100%;
-  text-align:center;line-height:1.5;
+  text-align:center;line-height:1.35;
   font-family:'Courier New',monospace;
   font-weight:bold;letter-spacing:1px;
   box-shadow:0 2px 8px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.9);
@@ -173,52 +173,23 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
   max-width:100%;
   position:relative;z-index:1;
 }
-/* 3行目：表示/非表示スイッチ */
-#hint-switch-row{
-  display:flex;align-items:center;gap:7px;
-  pointer-events:all;
-  margin-top:2px;
-  cursor:pointer;
-  -webkit-tap-highlight-color:transparent;
-}
-#hint-switch-row span{
-  font-size:8px;letter-spacing:1px;
-  font-family:'Courier New',monospace;
-  color:rgba(255,200,0,0.55);
-  transition:color .2s;
-}
-#hint-switch-row span.sw-active{color:rgba(255,220,0,0.95);}
-/* トグルスイッチ本体 */
-#hint-switch{
-  position:relative;width:34px;height:18px;
-  cursor:pointer;pointer-events:all;
-  flex-shrink:0;
-}
-#hint-switch input{opacity:0;width:0;height:0;position:absolute;}
-#hint-switch-track{
-  position:absolute;inset:0;
-  background:rgba(60,60,80,0.8);
-  border:1px solid rgba(255,200,0,0.35);
-  border-radius:9px;
-  transition:background .25s, border-color .25s;
-}
-#hint-switch-thumb{
-  position:absolute;top:2px;left:2px;
-  width:12px;height:12px;border-radius:50%;
-  background:rgba(255,200,0,0.5);
-  box-shadow:0 0 5px rgba(255,180,0,0.3);
-  transition:transform .25s, background .25s, box-shadow .25s;
-}
-#hint-switch.on #hint-switch-track{
-  background:rgba(255,180,0,0.22);
-  border-color:rgba(255,200,0,0.7);
-}
-#hint-switch.on #hint-switch-thumb{
-  transform:translateX(16px);
-  background:rgba(255,220,0,1);
-  box-shadow:0 0 8px rgba(255,200,0,0.7);
-}
 #hint-area.hidden{opacity:0;pointer-events:none;visibility:hidden;}
+/* 鬼面：ヒントパネルを暗く */
+#hint-area.oni-mode{
+  background:rgba(60,30,0,0.18);
+  border-left-color:rgba(255,100,0,0.25);
+  border-right-color:rgba(255,100,0,0.25);
+  box-shadow:0 0 10px rgba(180,60,0,0.08),0 2px 8px rgba(0,0,0,0.5),inset 0 0 10px rgba(120,40,0,0.06);
+}
+#hint-area.oni-mode::before{
+  background:linear-gradient(90deg,transparent,rgba(255,100,0,0.2),transparent);
+}
+#hint-area.oni-mode::after{
+  background:linear-gradient(90deg,transparent,rgba(255,80,0,0.12),transparent);
+}
+#hint-area.oni-mode #hint-label{
+  color:rgba(200,80,0,0.4);
+}
 #hint-stage{display:none;}
 
 /* Overlay */
@@ -408,15 +379,6 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
       <div id="hint-stage"></div>
       <div id="hint-label">ヒ ン ト</div>
       <span id="hint-text"></span>
-      <div id="hint-switch-row">
-        <span id="sw-label-off">非表示</span>
-        <label id="hint-switch" class="on">
-          <input type="checkbox" checked>
-          <div id="hint-switch-track"></div>
-          <div id="hint-switch-thumb"></div>
-        </label>
-        <span id="sw-label-on" class="sw-active">表示</span>
-      </div>
     </div>
   </div>
 
@@ -441,7 +403,9 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
       <div class="medal-wrap"><img src="medal6.webp" class="medal-img" id="medal6-img" alt="" onclick="onMedalClick(6)"><div class="medal-label">裏面100クリア</div></div>
     </div>
     <div id="medal-row3">
-      <div class="medal-wrap"><img src="medal7.webp" class="medal-img" id="medal7-img" alt="" onclick="onMedalClick(7)"><div class="medal-label">鬼面クリア</div></div>
+      <div class="medal-wrap"><img src="medal7.webp" class="medal-img" id="medal7-img" alt="" onclick="onMedalClick(7)"><div class="medal-label">鬼面10クリア</div></div>
+      <div class="medal-wrap"><img src="medal8.webp" class="medal-img" id="medal8-img" alt="" onclick="onMedalClick(8)"><div class="medal-label">鬼面30クリア</div></div>
+      <div class="medal-wrap"><img src="medal9.webp" class="medal-img" id="medal9-img" alt="" onclick="onMedalClick(9)"><div class="medal-label">鬼面100クリア</div></div>
     </div>
     <div id="overlay-bottom">
       <img id="start-btn" src="start1.webp" alt="START" onclick="startGame()">
@@ -482,7 +446,16 @@ const STAGE_DEFS = [
   { st:16, slime:false, spotlight:false, invert:true,    q:5, qRange:[1,100], slimeCount:0, label:'裏面',   head:'STAGE 7',    sub:'上下反転　心電図1〜100',                   color:'#8888ff' },
   { st:17, slime:true,  spotlight:false, invert:true,    q:5, qRange:[1,100], slimeCount:9, label:'裏面',   head:'STAGE 8',    sub:'上下反転　スライム9匹！',                  color:'#ff2266' },
   { st:18, slime:false, spotlight:true,  invert:true,    q:5, qRange:[1,100], slimeCount:0, label:'裏面',   head:'STAGE 9',    sub:'上下反転　スポットライト！',                color:'#ff4488' },
-  { st:19, slime:true,  spotlight:true,  invert:'rand',  q:30, qRange:[1,100], slimeCount:9, label:'鬼面',  head:'STAGE',      sub:'最終試練　カオス30題！',     color:'#ff4400' },
+  // ─ 鬼面 ST19〜27 ─
+  { st:19, slime:false, spotlight:false, invert:'rand',  q:5, qRange:[1,10],  slimeCount:0, label:'鬼面', head:'STAGE 19', sub:'ヒントなし　心電図1〜10',              color:'#ff6600' },
+  { st:20, slime:true,  spotlight:false, invert:'rand',  q:5, qRange:[1,10],  slimeCount:6, label:'鬼面', head:'STAGE 20', sub:'ヒントなし　スライム6匹！',            color:'#ff4400' },
+  { st:21, slime:false, spotlight:true,  invert:'rand',  q:5, qRange:[1,10],  slimeCount:0, label:'鬼面', head:'STAGE 21', sub:'ヒントなし　小スポットライト！',       color:'#ff2200' },
+  { st:22, slime:false, spotlight:false, invert:'rand',  q:5, qRange:[1,30],  slimeCount:0, label:'鬼面', head:'STAGE 22', sub:'ヒントなし　心電図1〜30',              color:'#ff6600' },
+  { st:23, slime:true,  spotlight:false, invert:'rand',  q:5, qRange:[1,30],  slimeCount:9, label:'鬼面', head:'STAGE 23', sub:'ヒントなし　スライム9匹！',            color:'#ff4400' },
+  { st:24, slime:false, spotlight:true,  invert:'rand',  q:5, qRange:[1,30],  slimeCount:0, label:'鬼面', head:'STAGE 24', sub:'ヒントなし　小スポットライト！',       color:'#ff2200' },
+  { st:25, slime:false, spotlight:false, invert:'rand',  q:5, qRange:[1,100], slimeCount:0, label:'鬼面', head:'STAGE 25', sub:'ヒントなし　心電図1〜100',             color:'#ff6600' },
+  { st:26, slime:true,  spotlight:false, invert:'rand',  q:5, qRange:[1,100], slimeCount:12,label:'鬼面', head:'STAGE 26', sub:'ヒントなし　スライム12匹！',           color:'#ff4400' },
+  { st:27, slime:false, spotlight:true,  invert:'rand',  q:5, qRange:[1,100], slimeCount:0, label:'鬼面', head:'STAGE 27', sub:'ヒントなし　小スポットライト！',       color:'#cc0000' },
 ];
 const BASE_SPEED = 0.14;
 const ACCEL      = 0.018;
@@ -970,7 +943,7 @@ function spawnWave(q, resetDanger=false){
 
     // スポットライト
     if(stageEffects.spotlight){
-      const isOni = getStageDef().st === 19;
+      const isOni = getStageDef().st >= 19;
       const sr = Math.min(W,currentWave.h)*0.36*1.5 * (isOni ? 0.75 : 1);
       spotlight={
         x: W*0.5, y: currentWave.y+currentWave.h*0.5,
@@ -1000,39 +973,30 @@ function spawnWave(q, resetDanger=false){
   const stageDef   = getStageDef();
   const hintStageEl= document.getElementById('hint-stage');
   const hintLbl    = document.getElementById('hint-label');
-  const hintSw     = document.getElementById('hint-switch-row');
   if(hintEl && hintArea){
     hintEl.style.color = '';
     hintEl.style.fontSize = '';
     if(hintStageEl) hintStageEl.innerHTML = '';
 
-    if(stageDef.st === 19){
-      // 鬼面：ヒント本文「・・・」固定、トグル表示だが無効化
+    if(stageDef.st >= 19){
+      // 鬼面：「・・・」固定・暗めパネル
       hintArea.classList.remove('hidden');
+      hintArea.classList.add('oni-mode');
       if(hintLbl) hintLbl.style.display = '';
       hintEl.style.display = '';
       hintEl.innerHTML = '・・・';
-      hintEl.style.color = 'rgba(255,200,0,0.45)';
+      hintEl.style.color = 'rgba(180,70,0,0.5)';
       hintEl.style.fontSize = '13px';
-      if(hintSw){
-        hintSw.style.display = '';
-        hintSw.style.opacity = '0.35';
-        hintSw.style.pointerEvents = 'none';
-      }
       // hint-area内の進捗バーがあれば削除
       const oldProg = hintArea.querySelector('.oni-progress');
       if(oldProg) oldProg.remove();
     } else {
-      hintEl.style.display = '';
-      if(hintLbl) hintLbl.style.display = '';
-      if(hintSw){
-        hintSw.style.display = '';
-        hintSw.style.opacity = '';
-        hintSw.style.pointerEvents = '';
-      }
+      // 表面・裏面：常にヒント表示
       hintArea.classList.remove('hidden');
-      currentHintContent = q.hint || '';
-      applyHintVisibility();
+      hintArea.classList.remove('oni-mode');
+      if(hintLbl) hintLbl.style.display = '';
+      hintEl.style.display = '';
+      hintEl.innerHTML = q.hint || '';
     }
   }
 }
@@ -1048,9 +1012,9 @@ function updateOniProgress(){
     prog.innerHTML = '<div class="oni-prog-label"></div><div class="oni-prog-bar-wrap"><div class="oni-prog-bar"></div></div>';
     hintArea.appendChild(prog);
   }
-  const oniDef2 = STAGE_DEFS.find(x=>x.st===19);
+  const oniDef2 = getStageDef();
   const cleared = stageQCount;
-  const total   = oniDef2 ? oniDef2.q : 30;
+  const total   = oniDef2 ? oniDef2.q : 5;
   const pct     = Math.min(100, (cleared / total) * 100);
   prog.querySelector('.oni-prog-label').textContent = `${cleared} / ${total}`;
   prog.querySelector('.oni-prog-bar').style.width = pct + '%';
@@ -1162,13 +1126,6 @@ function onCorrect(lbl){
   setTimeout(()=>{
     if(currentWave) currentWave.alive=false;
 
-    // 鬼面クリア判定
-    const oniDef = STAGE_DEFS.find(x=>x.st===19);
-    if(prevStage===19 && stageQCount >= (oniDef ? oniDef.q : 1)){
-      earnMedalAndCelebrate(7, 8, 'oni', ()=>{ returnToTop(); });
-      return;
-    }
-
     // ─ メダル獲得判定（各ステージクリア後）─
     if(prevStage===3 && stageCleared){
       earnMedalAndCelebrate(1, 2, 'omote', ()=>{
@@ -1205,6 +1162,23 @@ function onCorrect(lbl){
         stageQCount=0; slimes=[]; spotlight=null; particles_arr=[];
         showStageAnnounce(19, ()=>spawnWave(pickQuestion(), true));
       }); return;
+    }
+    // 鬼面クリア判定（3段階）
+    if(prevStage===21 && stageCleared){
+      earnMedalAndCelebrate(7, 8, 'oni', ()=>{
+        stageQCount=0; slimes=[]; spotlight=null; particles_arr=[];
+        showStageAnnounce(22, ()=>spawnWave(pickQuestion(), true));
+      }); return;
+    }
+    if(prevStage===24 && stageCleared){
+      earnMedalAndCelebrate(8, 9, 'oni', ()=>{
+        stageQCount=0; slimes=[]; spotlight=null; particles_arr=[];
+        showStageAnnounce(25, ()=>spawnWave(pickQuestion(), true));
+      }); return;
+    }
+    if(prevStage===27 && stageCleared){
+      earnMedalAndCelebrate(9, 10, 'oni', ()=>{ returnToTop(); });
+      return;
     }
     if(stageCleared){
       slimes=[];
@@ -1349,7 +1323,7 @@ function startCelebration(type, cb, medalNum, btnNum){
   const clearTextMap = {
     1:'表面10クリア！', 2:'表面30クリア！', 3:'表面100クリア！',
     4:'裏面10クリア！', 5:'裏面30クリア！', 6:'裏面100クリア！',
-    7:'鬼面クリア！'
+    7:'鬼面10クリア！', 8:'鬼面30クリア！', 9:'鬼面100クリア！'
   };
   const faceLabel = type==='omote' ? '表面' : type==='ura' ? '裏面' : '鬼面';
   const clearText = _mnum ? (clearTextMap[_mnum] || faceLabel+'クリア！') : faceLabel+'クリア！';
@@ -1398,7 +1372,7 @@ function startCelebration(type, cb, medalNum, btnNum){
 
     const medalBottom = medalY + Math.min(cW*0.55,220) * 1.05;
     cc.shadowColor='#ffdd00'; cc.shadowBlur=16; cc.fillStyle='#ffee88';
-    cc.fillText(_mnum === 7 ? 'ECGエキスパート認定！' : 'メダル獲得！', cW/2, medalBottom + fs*1.1);
+    cc.fillText(_mnum === 9 ? 'ECGエキスパート認定！' : 'メダル獲得！', cW/2, medalBottom + fs*1.1);
 
     cc.restore();
     if(elapsed > 2000) showBtn();
@@ -1413,8 +1387,8 @@ function showStageAnnounce(stage, cb){
 
   // ステージ名を日本語で生成
   let stageName;
-  if(stage === 19){
-    stageName = '最終ステージ';
+  if(stage >= 19){
+    stageName = `最終ステージ ${stage-18}`;
   } else {
     stageName = `ステージ${stage}`;
   }
@@ -2078,9 +2052,9 @@ function updateHUD(st){
   const faceDisp  = document.getElementById('face-display');
   const stageDisp = document.getElementById('stage-display');
   const progBar   = document.getElementById('hud-progress-bar');
-  if(st === 19){
+  if(st >= 19){
     if(faceDisp)  faceDisp.innerHTML = `<span style="color:#ff4400;text-shadow:0 0 8px rgba(255,80,0,0.8);">鬼面</span>`;
-    if(stageDisp) stageDisp.innerHTML = `<span style="color:#ff4400;text-shadow:0 0 8px rgba(255,80,0,0.8);">最終ステージ</span>`;
+    if(stageDisp) stageDisp.innerHTML = `<span style="color:#ff4400;text-shadow:0 0 8px rgba(255,80,0,0.8);">最終S ${st-18}</span>`;
     if(progBar){ progBar.style.background = 'linear-gradient(90deg,#ff4400,#ff8800)'; progBar.style.boxShadow = '0 0 6px rgba(255,100,0,0.6)'; }
   } else if(st > 9){
     if(faceDisp)  faceDisp.innerHTML = `<span style="color:#ff88ff;text-shadow:0 0 8px rgba(255,100,255,0.5);">裏面</span>`;
@@ -2154,27 +2128,29 @@ function onMedalClick(num){
   if(!earned) return; // 未獲得はタップ不可
   overlay.style.display = 'none';
   if(_overlayStarsRaf){ cancelAnimationFrame(_overlayStarsRaf); _overlayStarsRaf=null; }
-  const typeMap = {1:'omote',2:'omote',3:'omote',4:'ura',5:'ura',6:'ura',7:'oni'};
+  const typeMap = {1:'omote',2:'omote',3:'omote',4:'ura',5:'ura',6:'ura',7:'oni',8:'oni',9:'oni'};
   W = canvas.offsetWidth || 430;
   H = canvas.offsetHeight || 700;
   // クリックで続きのステージから開始
   const cbMap = {
     1: ()=>{ startGameFrom(4);  },   // メダル1→ST4から
     2: ()=>{ startGameFrom(7);  },   // メダル2→ST7から
-    3: ()=>{ startGameFrom(10); },   // メダル3→裏面ST11から
+    3: ()=>{ startGameFrom(10); },   // メダル3→裏面ST10から
     4: ()=>{ startGameFrom(13); },   // メダル4→ST13から
     5: ()=>{ startGameFrom(16); },   // メダル5→ST16から
     6: ()=>{ startGameFrom(19); },   // メダル6→ST19から（鬼面）
-    7: ()=>{ returnToTop(); }         // メダル7→トップへ
+    7: ()=>{ startGameFrom(22); },   // メダル7→ST22から
+    8: ()=>{ startGameFrom(25); },   // メダル8→ST25から
+    9: ()=>{ returnToTop(); }         // メダル9→トップへ
   };
-  const _btnNum = num < 7 ? num + 1 : 8;
+  const _btnNum = num < 9 ? num + 1 : 10;
   startCelebration(typeMap[num], cbMap[num], num, _btnNum);
 }
 
 
 function resetAllRecords(){
   if(!confirm('すべての記録（メダル・進行状況）をリセットしますか？')) return;
-  for(let i=1;i<=7;i++) localStorage.removeItem(`medal${i}`);
+  for(let i=1;i<=9;i++) localStorage.removeItem(`medal${i}`);
   localStorage.removeItem('hintVisible');
   applyMedalState();
   // スタートボタンをstart1に戻す
@@ -2182,7 +2158,7 @@ function resetAllRecords(){
   if(btn) btn.src = 'start1.webp';
 }
 function applyMedalState(){
-  [1,2,3,4,5,6,7].forEach(n=>{
+  [1,2,3,4,5,6,7,8,9].forEach(n=>{
     const m=document.getElementById(`medal${n}-img`);
     if(m) m.classList.toggle('earned', localStorage.getItem(`medal${n}`)==='1');
   });
@@ -2208,7 +2184,10 @@ function returnToTop(){
     '4': ()=>startGameFrom(10),
     '5': ()=>startGameFrom(12),
     '6': ()=>startGameFrom(15),
-    '7': ()=>startGameFrom(18),
+    '7': ()=>startGameFrom(19),
+    '8': ()=>startGameFrom(22),
+    '9': ()=>startGameFrom(25),
+    '10': ()=>returnToTop(),
   };
   const m = src.match(/start(\d+)\.webp/);
   const fn = m ? stStartMap[m[1]] : null;
@@ -2391,7 +2370,10 @@ document.getElementById('start-btn').addEventListener('click', ()=>{
     '4': ()=>startGameFrom(10),
     '5': ()=>startGameFrom(12),
     '6': ()=>startGameFrom(15),
-    '7': ()=>startGameFrom(18),
+    '7': ()=>startGameFrom(19),
+    '8': ()=>startGameFrom(22),
+    '9': ()=>startGameFrom(25),
+    '10': ()=>returnToTop(),
   };
   const m = src.match(/start(\d+)\.webp/);
   const fn = m ? stStartMap[m[1]] : null;
@@ -2399,46 +2381,10 @@ document.getElementById('start-btn').addEventListener('click', ()=>{
 });
 applyMedalState();
 
-// ── ヒントパネル 表示/非表示スイッチ ────────────────────────────────
-let hintUserVisible = localStorage.getItem('hintVisible') !== 'false'; // ローカル保存値を読む（初期値:表示）
-let currentHintContent = ''; // 現在のヒント文（常にここを正とする）
+// 現在のヒント文（互換用・使用箇所なし）
+let currentHintContent = '';
 
-function applyHintVisibility(){
-  const hintText = document.getElementById('hint-text');
-  const switchEl = document.getElementById('hint-switch');
-  const labelOff = document.getElementById('sw-label-off');
-  const labelOn  = document.getElementById('sw-label-on');
-  if(hintUserVisible){
-    if(hintText){
-      hintText.innerHTML = currentHintContent;
-      hintText.style.color = '';
-      hintText.style.fontSize = '';
-    }
-    if(switchEl) switchEl.classList.add('on');
-    if(labelOff) labelOff.classList.remove('sw-active');
-    if(labelOn)  labelOn.classList.add('sw-active');
-  } else {
-    if(hintText){
-      hintText.innerHTML = '・・・';
-      hintText.style.color = 'rgba(255,200,0,0.45)';
-      hintText.style.fontSize = '13px';
-    }
-    if(switchEl) switchEl.classList.remove('on');
-    if(labelOff) labelOff.classList.add('sw-active');
-    if(labelOn)  labelOn.classList.remove('sw-active');
-  }
-}
-
-// スイッチ行をクリックで切り替え
-document.getElementById('hint-switch-row').addEventListener('click', (e)=>{
-  e.preventDefault();
-  hintUserVisible = !hintUserVisible;
-  localStorage.setItem('hintVisible', hintUserVisible);
-  applyHintVisibility();
-});
-
-// 初期適用
-applyHintVisibility();
+// 初期適用（hint-areaは hidden のまま開始）
 
 // ── 虫眼鏡機能 ────────────────────────────────────────────────────────────
 (function(){
