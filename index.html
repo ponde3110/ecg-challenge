@@ -1,0 +1,2801 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ECGチャレンジ</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow:hidden;height:100dvh;width:100vw;display:flex;justify-content:center;}
+#game-container{position:relative;width:100%;max-width:430px;height:100dvh;overflow:hidden;background:#0a0a12;display:flex;flex-direction:column;}
+
+/* Header */
+#ui{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:6px 14px;flex-shrink:0;
+  background:linear-gradient(180deg,rgba(0,10,30,0.95) 0%,rgba(0,6,18,0.85) 100%);
+  border-bottom:1px solid rgba(0,180,255,0.12);
+  box-shadow:0 2px 12px rgba(0,0,0,0.4);
+}
+#face-display{
+  font-size:12px;letter-spacing:2px;min-width:60px;
+  font-family:'Courier New',monospace;
+  color:rgba(0,255,136,0.85);
+  text-shadow:0 0 8px rgba(0,255,136,0.4);
+}
+
+#stage-display{
+  font-size:12px;color:#00ccff;letter-spacing:2px;text-align:right;min-width:80px;
+  font-family:'Courier New',monospace;
+  text-shadow:0 0 10px rgba(0,200,255,0.6);
+}
+#hi-display{display:none;}
+#combo-display{display:none;}
+/* HUD中央 ステージ進捗バー */
+#hud-progress-wrap{
+  flex:1;margin:0 10px;height:6px;
+  background:rgba(255,255,255,0.08);
+  border-radius:3px;overflow:hidden;
+  border:1px solid rgba(0,180,255,0.18);
+}
+#hud-progress-bar{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,#00ccff,#00ff88);
+  border-radius:3px;
+  transition:width 0.4s ease;
+  box-shadow:0 0 6px rgba(0,200,255,0.5);
+}
+
+/* ECG falling area */
+#ecg-area{position:relative;flex:1;overflow:hidden;min-height:0;}
+canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
+canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
+
+/* Bottom control panel */
+#control-panel{flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,rgb(4,8,22) 0%,rgb(6,12,28) 100%);box-shadow:0 -2px 12px rgba(0,0,0,0.4);}
+
+/* Diagnosis labels */
+#labels-row{display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:6px;padding:8px 10px 10px;}
+.diag-label{
+  font-size:12px;color:#111;
+  background:#ffffff;
+  border:1px solid rgba(200,210,230,0.8);
+  border-bottom:2px solid rgba(160,180,220,0.9);
+  border-radius:10px;padding:11px 16px;
+  white-space:normal;word-break:break-all;width:100%;
+  text-align:center;line-height:1.35;
+  font-family:'Courier New',monospace;
+  font-weight:bold;letter-spacing:1px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.35),inset 0 1px 0 rgba(255,255,255,0.9);
+  transition:background .12s,transform .08s,box-shadow .12s;
+  user-select:none;cursor:pointer;position:relative;overflow:visible;
+}
+.diag-label:active{
+  background:#e8edf5;
+  transform:scale(0.97);
+  box-shadow:0 1px 4px rgba(0,0,0,0.3);
+}
+.diag-label.hit-correct{
+  background:#b8f0d0 !important;
+  border-color:#008833 !important;
+  border-bottom-color:#005522 !important;
+  color:#003311 !important;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2) !important;
+  position:relative;
+}
+.diag-label.hit-correct::after{
+  content:'正解';
+  position:absolute;top:50%;left:12px;transform:translateY(-50%);
+  font-size:12px;font-weight:900;white-space:nowrap;
+  font-family:'Helvetica Neue','Hiragino Sans','Yu Gothic',sans-serif;
+  letter-spacing:3px;
+  color:#fff;
+  background:linear-gradient(135deg,#e03030 0%,#cc1a1a 60%,#b01010 100%);
+  padding:3px 10px 4px;
+  border-radius:5px;
+  box-shadow:0 3px 12px rgba(180,0,0,0.6),inset 0 1px 0 rgba(255,120,120,0.3),inset 0 -1px 0 rgba(0,0,0,0.3);
+  text-shadow:0 1px 3px rgba(0,0,0,0.5);
+  animation:popInCorrect 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+@keyframes popInCorrect{
+  0%{transform:translateY(-50%) scale(0.3);opacity:0;}
+  55%{transform:translateY(-50%) scale(1.1);opacity:1;}
+  75%{transform:translateY(-50%) scale(0.97);}
+  100%{transform:translateY(-50%) scale(1);opacity:1;}
+}
+.diag-label.hit-wrong{
+  background:#f8b0b0 !important;
+  border-color:#cc0000 !important;
+  border-bottom-color:#990000 !important;
+  color:#880000 !important;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2) !important;
+}
+
+/* 鬼面進捗グラフ */
+.oni-progress{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:4px 0;width:100%;
+}
+.oni-prog-label{
+  font-size:11px;color:rgba(255,100,0,0.9);
+  font-family:'Courier New',monospace;letter-spacing:2px;
+}
+.oni-prog-bar-wrap{
+  width:90%;height:8px;background:rgba(255,255,255,0.1);
+  border-radius:4px;overflow:hidden;
+  border:1px solid rgba(255,100,0,0.4);
+}
+.oni-prog-bar{
+  height:100%;
+  background:linear-gradient(90deg,#ff4400,#ff8800);
+  border-radius:4px;
+  transition:width 0.4s ease;
+  box-shadow:0 0 8px rgba(255,100,0,0.6);
+}
+#hint-area{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  width:90%;max-width:90%;
+  padding:8px 20px 10px;
+  background:rgba(255,200,40,0.07);
+  border:none;
+  border-left:3px solid rgba(255,200,0,0.7);
+  border-right:3px solid rgba(255,200,0,0.7);
+  border-radius:3px;
+  box-shadow:0 0 18px rgba(255,180,0,0.15),0 2px 8px rgba(0,0,0,0.4),inset 0 0 14px rgba(255,160,0,0.05);
+  position:absolute;
+  left:50%;transform:translateX(-50%);
+  overflow:visible;
+  transition:opacity .3s,visibility .3s;
+  z-index:5;
+  pointer-events:none;
+}
+#hint-area::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,200,0,0.55),transparent);
+}
+#hint-area::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,180,0,0.35),transparent);
+}
+/* 1行目：ヒントラベル（常時表示） */
+#hint-label{
+  font-size:7px;color:rgba(255,200,0,0.5);letter-spacing:5px;
+  font-family:'Courier New',monospace;
+  text-align:center;
+}
+/* 2行目：ヒント本文 or ・・・ */
+#hint-text{
+  font-size:14px;color:#fff8dc;letter-spacing:1px;
+  font-family:'Helvetica Neue','Hiragino Sans','Yu Gothic',sans-serif;font-weight:bold;
+  text-shadow:0 0 10px rgba(255,180,0,0.25),0 1px 3px rgba(0,0,0,0.7);
+  text-align:center;line-height:1.5;
+  white-space:normal;overflow:visible;text-overflow:clip;
+  max-width:100%;
+  position:relative;z-index:1;
+}
+#hint-area.hidden{opacity:0;pointer-events:none;visibility:hidden;}
+#hint-stage{display:none;}
+
+/* Overlay */
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;background:rgba(0,0,8,0.97);z-index:20;overflow-y:auto;}
+#overlay-stars{position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+#overlay > *:not(#overlay-stars){position:relative;z-index:1;}
+#overlay-top{
+  flex-shrink:0;width:100%;
+  display:flex;align-items:center;justify-content:center;
+  padding:4px 16px 0;
+  position:relative;
+}
+#top-img{
+  width:min(380px,96%);
+  max-height:min(260px,38vh);
+  object-fit:contain;
+  border-radius:16px;
+  opacity:0.97;
+  filter:drop-shadow(0 0 20px rgba(0,220,255,0.4)) drop-shadow(0 0 8px rgba(0,255,136,0.25));
+  animation:topImgPulse 4s ease-in-out infinite;
+}
+@keyframes topImgPulse{
+  0%,100%{filter:drop-shadow(0 0 20px rgba(0,220,255,0.4)) drop-shadow(0 0 8px rgba(0,255,136,0.25));}
+  50%{filter:drop-shadow(0 0 32px rgba(0,220,255,0.65)) drop-shadow(0 0 14px rgba(0,255,136,0.4));}
+}
+/* メダル */
+#medal-row{display:flex;justify-content:center;align-items:center;gap:20px;padding:0;margin-top:-8px;flex-shrink:0;}
+#medal-row2{display:flex;justify-content:center;align-items:center;gap:20px;padding:0;margin-top:10px;flex-shrink:0;}
+#medal-row3{display:flex;justify-content:center;align-items:center;gap:20px;padding:0;margin-top:10px;flex-shrink:0;}
+.medal-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.medal-img{width:88px;height:88px;object-fit:contain;opacity:0.3;filter:grayscale(0.6);transition:opacity .5s,filter .5s,transform .12s;border-radius:50%;cursor:pointer;}
+.medal-img.earned:hover{transform:scale(1.08);filter:drop-shadow(0 0 20px rgba(255,220,0,0.7));}
+.medal-img.earned:active{transform:scale(0.96);}
+.medal-img.earned{opacity:1;filter:none;animation:medalGlow 2.5s ease-in-out infinite;}
+@keyframes medalGlow{0%,100%{filter:drop-shadow(0 0 7px rgba(255,220,0,0.5));}50%{filter:drop-shadow(0 0 16px rgba(255,220,0,0.9));}}
+.medal-label{font-size:7px;color:rgba(255,255,255,0.28);letter-spacing:1px;font-family:'Courier New',monospace;}
+/* スライドショー */
+/* 説明文 */
+#overlay-desc{
+  flex-shrink:0;
+  display:flex;flex-direction:column;align-items:stretch;gap:14px;
+  padding:30px 20px 40px;
+}
+  width:min(320px,88%);
+}
+.desc-line{
+  display:flex;align-items:baseline;justify-content:center;gap:6px;
+  white-space:nowrap;
+}
+.desc-num{
+  font-size:52px;font-weight:900;
+  font-family:'Helvetica Neue','Hiragino Sans','Yu Gothic',sans-serif;
+  color:#00ccff;line-height:1;letter-spacing:-1px;
+  text-shadow:0 0 20px rgba(0,200,255,0.6),0 0 40px rgba(0,200,255,0.3);
+}
+.desc-num-ja{
+  font-size:46px;font-weight:900;
+  font-family:'Helvetica Neue','Hiragino Sans','Yu Gothic',sans-serif;
+  color:#00ccff;line-height:1;letter-spacing:1px;
+  text-shadow:0 0 20px rgba(0,200,255,0.6),0 0 40px rgba(0,200,255,0.3);
+}
+.desc-icon{font-size:32px;line-height:1;}
+.desc-text{
+  font-size:17px;font-weight:bold;
+  font-family:'Helvetica Neue','Hiragino Sans','Yu Gothic',sans-serif;
+  color:rgba(255,255,255,0.88);letter-spacing:1px;
+  text-shadow:0 1px 8px rgba(0,0,0,0.5);
+}
+/* STARTボタンエリア */
+#overlay-bottom{
+  flex-shrink:0;
+  padding:36px 16px 12px;
+  display:flex;flex-direction:column;align-items:center;gap:18px;
+  width:100%;
+}
+#start-btn{
+  width:min(280px,80%);
+  cursor:pointer;
+  display:block;
+  border:none;background:none;padding:0;
+  transition:transform .12s, filter .12s;
+  filter:drop-shadow(0 0 12px rgba(0,255,136,0.3));
+}
+#start-btn:hover{transform:scale(1.04);filter:drop-shadow(0 0 20px rgba(0,255,136,0.55));}
+#start-btn:active{transform:scale(0.97);}
+
+/* 免責エリア：画面下端に固定 */
+#overlay-disclaimer{
+  position:sticky;bottom:0;
+  width:100%;
+  padding:8px 16px 12px;
+  background:linear-gradient(0deg,rgba(0,0,8,1) 70%,rgba(0,0,8,0));
+  margin-top:auto;
+}
+.score-final{font-size:36px;color:#fff;letter-spacing:2px;}
+.label-small{font-size:10px;color:#556;letter-spacing:3px;}
+
+/* ─── 横向き対応 ─── */
+@media (orientation: landscape) and (max-height: 500px) {
+  body { overflow-y: auto; height: auto; min-height: 100dvh; }
+  #game-container {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+    max-width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  #ui { width: 100%; flex-shrink: 0; }
+  #ecg-area {
+    width: 60%;
+    min-height: 220px;
+    max-height: 70vw;
+    flex: none;
+  }
+  #control-panel {
+    width: 40%;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: 80dvh;
+    padding: 4px;
+  }
+  #hint-area {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    margin-bottom: 6px;
+  }
+  .choice-btn { font-size: 11px; padding: 7px 4px; }
+}
+
+#reset-btn{
+  position:absolute;top:10px;right:10px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius:50%;width:32px;height:32px;
+  color:rgba(255,255,255,0.45);
+  font-size:16px;line-height:1;
+  cursor:pointer;z-index:5;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s,transform .12s;
+  padding:0;
+}
+#reset-btn:hover{
+  background:rgba(255,60,60,0.25);
+  border-color:rgba(255,80,80,0.5);
+  color:rgba(255,120,120,0.9);
+  transform:rotate(-20deg) scale(1.1);
+}
+#reset-btn:active{ transform:rotate(-40deg) scale(0.95); }
+
+/* 虫眼鏡オーバーレイ */
+#magnifier-overlay{
+  display:none;
+  position:absolute;
+  inset:0;
+  z-index:25;
+  background:#000;
+  cursor:zoom-out;
+  touch-action:none;
+}
+#magnifier-canvas{
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:100%;
+}
+</style>
+</head>
+<body>
+<div id="game-container">
+
+  <div id="ui">
+    <div id="face-display">表面</div>
+    <div id="hud-progress-wrap"><div id="hud-progress-bar"></div></div>
+    <div id="stage-display">ステージ<span id="level">1</span></div>
+  </div>
+
+  <div id="ecg-area">
+    <canvas id="canvas"></canvas>
+    <div id="magnifier-overlay">
+      <canvas id="magnifier-canvas"></canvas>
+    </div>
+    <div id="hint-area">
+      <div id="hint-stage"></div>
+      <div id="hint-label">ヒ ン ト</div>
+      <span id="hint-text"></span>
+    </div>
+  </div>
+
+  <div id="control-panel">
+    <div id="labels-row"></div>
+  </div>
+
+  <div id="overlay">
+    <canvas id="overlay-stars"></canvas>
+    <div id="overlay-top">
+      <img id="top-img" src="top.webp" alt="" onerror="this.style.display='none'">
+      <button id="reset-btn" onclick="resetAllRecords()" title="記録をリセット">↺</button>
+    </div>
+      <div id="overlay-desc">
+      <div class="desc-line">
+        <span class="desc-text">計 </span><span class="desc-num">100</span><span class="desc-text"> 心電図 </span><span class="desc-num">9</span><span class="desc-text"> メダル</span>
+      </div>
+    </div>
+    <div id="medal-row">
+      <div class="medal-wrap"><img src="medal1.webp" class="medal-img" id="medal1-img" alt="" onclick="onMedalClick(1)"><div class="medal-label">表面10クリア</div></div>
+      <div class="medal-wrap"><img src="medal2.webp" class="medal-img" id="medal2-img" alt="" onclick="onMedalClick(2)"><div class="medal-label">表面30クリア</div></div>
+      <div class="medal-wrap"><img src="medal3.webp" class="medal-img" id="medal3-img" alt="" onclick="onMedalClick(3)"><div class="medal-label">表面100クリア</div></div>
+    </div>
+    <div id="medal-row2">
+      <div class="medal-wrap"><img src="medal4.webp" class="medal-img" id="medal4-img" alt="" onclick="onMedalClick(4)"><div class="medal-label">裏面10クリア</div></div>
+      <div class="medal-wrap"><img src="medal5.webp" class="medal-img" id="medal5-img" alt="" onclick="onMedalClick(5)"><div class="medal-label">裏面30クリア</div></div>
+      <div class="medal-wrap"><img src="medal6.webp" class="medal-img" id="medal6-img" alt="" onclick="onMedalClick(6)"><div class="medal-label">裏面100クリア</div></div>
+    </div>
+    <div id="medal-row3">
+      <div class="medal-wrap"><img src="medal7.webp" class="medal-img" id="medal7-img" alt="" onclick="onMedalClick(7)"><div class="medal-label">鬼面10クリア</div></div>
+      <div class="medal-wrap"><img src="medal8.webp" class="medal-img" id="medal8-img" alt="" onclick="onMedalClick(8)"><div class="medal-label">鬼面30クリア</div></div>
+      <div class="medal-wrap"><img src="medal9.webp" class="medal-img" id="medal9-img" alt="" onclick="onMedalClick(9)"><div class="medal-label">鬼面100クリア</div></div>
+    </div>
+  
+    <div id="overlay-bottom">
+      <img id="start-btn" src="start.webp" alt="START" onclick="startGame()">
+      <div style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1px;font-family:'Courier New',monospace;">© 2026 ponde3110</div>
+    </div>
+    <div id="overlay-disclaimer">
+      <div style="font-size:8px;color:rgba(255,255,255,0.2);text-align:left;line-height:1.8;font-family:'Helvetica Neue','Hiragino Sans','Yu Gothic',sans-serif;">
+        心電図の解釈は必ずしも一義的ではないため，本アプリに掲載された情報に基づいて生じたいかなる損害について一切の責任を負いかねます．本アプリに含まれるすべてのコンテンツは，著作権法により保護されています．
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+// ヒント非表示レベル閾値
+const HINT_HIDE_LEVEL = 3;
+
+// ─── ステージ定義 ─────────────────────────────────────────────────────────
+// hint:true=常時表示  slime/spotlight/invert:エフェクト  q:そのステージの問題数
+const STAGE_DEFS = [
+  // ─ 表面 ST1〜10 ─
+  { st:1,  slime:false, spotlight:false, invert:false,   q:10, qRange:[1,10],  slimeCount:0, label:'表面',   head:'STAGE 1',    sub:'心電図1〜10',                          color:'#00ff88' },
+  { st:2,  slime:true,  spotlight:false, invert:false,   q:10, qRange:[1,10],  slimeCount:3, label:'表面',   head:'STAGE 2',    sub:'心電図1〜10　スライム3匹！',            color:'#88ffaa' },
+  { st:3,  slime:false, spotlight:true,  invert:false,   q:10, qRange:[1,10],  slimeCount:0, label:'表面',   head:'STAGE 3',    sub:'心電図1〜10　スポットライト！',         color:'#ffcc00' },
+  { st:4,  slime:false, spotlight:false, invert:false,   q:10, qRange:[1,30],  slimeCount:0, label:'表面',   head:'STAGE 4',    sub:'心電図1〜30',                          color:'#00ccff' },
+  { st:5,  slime:true,  spotlight:false, invert:false,   q:10, qRange:[1,30],  slimeCount:6, label:'表面',   head:'STAGE 5',    sub:'心電図1〜30　スライム6匹！',            color:'#88ffaa' },
+  { st:6,  slime:false, spotlight:true,  invert:false,   q:10, qRange:[1,30],  slimeCount:0, label:'表面',   head:'STAGE 6',    sub:'心電図1〜30　スポットライト！',         color:'#ffcc00' },
+  { st:7,  slime:false, spotlight:false, invert:false,   q:10, qRange:[1,100], slimeCount:0, label:'表面',   head:'STAGE 7',    sub:'心電図1〜100',                         color:'#00aaff' },
+  { st:8,  slime:true,  spotlight:false, invert:false,   q:10, qRange:[1,100], slimeCount:9, label:'表面',   head:'STAGE 8',    sub:'心電図1〜100　スライム9匹！',           color:'#ff9900' },
+  { st:9,  slime:false, spotlight:true,  invert:false,   q:10, qRange:[1,100], slimeCount:0, label:'表面',   head:'STAGE 9',    sub:'心電図1〜100　スポットライト！',        color:'#ffcc00' },
+  // ─ 裏面 ST11〜20 ─
+  { st:10, slime:false, spotlight:false, invert:true,    q:5, qRange:[1,10],  slimeCount:0, label:'裏面',   head:'STAGE 1',    sub:'上下反転　心電図1〜10',                    color:'#ff88ff' },
+  { st:11, slime:true,  spotlight:false, invert:true,    q:5, qRange:[1,10],  slimeCount:3, label:'裏面',   head:'STAGE 2',    sub:'上下反転　スライム3匹！',                  color:'#cc88ff' },
+  { st:12, slime:false, spotlight:true,  invert:true,    q:5, qRange:[1,10],  slimeCount:0, label:'裏面',   head:'STAGE 3',    sub:'上下反転　スポットライト！',                color:'#ff66cc' },
+  { st:13, slime:false, spotlight:false, invert:true,    q:5, qRange:[1,30],  slimeCount:0, label:'裏面',   head:'STAGE 4',    sub:'上下反転　心電図1〜30',                    color:'#aa88ff' },
+  { st:14, slime:true,  spotlight:false, invert:true,    q:5, qRange:[1,30],  slimeCount:6, label:'裏面',   head:'STAGE 5',    sub:'上下反転　スライム6匹！',                  color:'#cc44ff' },
+  { st:15, slime:false, spotlight:true,  invert:true,    q:5, qRange:[1,30],  slimeCount:0, label:'裏面',   head:'STAGE 6',    sub:'上下反転　スポットライト！',                color:'#ff4488' },
+  { st:16, slime:false, spotlight:false, invert:true,    q:5, qRange:[1,100], slimeCount:0, label:'裏面',   head:'STAGE 7',    sub:'上下反転　心電図1〜100',                   color:'#8888ff' },
+  { st:17, slime:true,  spotlight:false, invert:true,    q:5, qRange:[1,100], slimeCount:9, label:'裏面',   head:'STAGE 8',    sub:'上下反転　スライム9匹！',                  color:'#ff2266' },
+  { st:18, slime:false, spotlight:true,  invert:true,    q:5, qRange:[1,100], slimeCount:0, label:'裏面',   head:'STAGE 9',    sub:'上下反転　スポットライト！',                color:'#ff4488' },
+  // ─ 鬼面 ST19〜27 ─
+  { st:19, slime:false, spotlight:false, invert:'rand',  q:5, qRange:[1,10],  slimeCount:0, label:'鬼面', head:'STAGE 19', sub:'ヒントなし　心電図1〜10',              color:'#ff6600' },
+  { st:20, slime:true,  spotlight:false, invert:'rand',  q:5, qRange:[1,10],  slimeCount:6, label:'鬼面', head:'STAGE 20', sub:'ヒントなし　スライム6匹！',            color:'#ff4400' },
+  { st:21, slime:false, spotlight:true,  invert:'rand',  q:5, qRange:[1,10],  slimeCount:0, label:'鬼面', head:'STAGE 21', sub:'ヒントなし　小スポットライト！',       color:'#ff2200' },
+  { st:22, slime:false, spotlight:false, invert:'rand',  q:5, qRange:[1,30],  slimeCount:0, label:'鬼面', head:'STAGE 22', sub:'ヒントなし　心電図1〜30',              color:'#ff6600' },
+  { st:23, slime:true,  spotlight:false, invert:'rand',  q:5, qRange:[1,30],  slimeCount:9, label:'鬼面', head:'STAGE 23', sub:'ヒントなし　スライム9匹！',            color:'#ff4400' },
+  { st:24, slime:false, spotlight:true,  invert:'rand',  q:5, qRange:[1,30],  slimeCount:0, label:'鬼面', head:'STAGE 24', sub:'ヒントなし　小スポットライト！',       color:'#ff2200' },
+  { st:25, slime:false, spotlight:false, invert:'rand',  q:1, qRange:[1,100], slimeCount:0, label:'鬼面', head:'STAGE 25', sub:'ヒントなし　心電図1〜100',             color:'#ff6600' },
+  { st:26, slime:true,  spotlight:false, invert:'rand',  q:1, qRange:[1,100], slimeCount:12,label:'鬼面', head:'STAGE 26', sub:'ヒントなし　スライム12匹！',           color:'#ff4400' },
+  { st:27, slime:false, spotlight:true,  invert:'rand',  q:1, qRange:[1,100], slimeCount:0, label:'鬼面', head:'STAGE 27', sub:'ヒントなし　小スポットライト！',       color:'#cc0000' },
+];
+const BASE_SPEED = 0.14;
+const ACCEL      = 0.018;
+
+let questionCount = 0; // 正解した問題数（全ステージ通算）
+let stageQCount   = 0; // 現在ステージ内の正解数
+
+function getStageDef(){
+  let used = 0;
+  for(const d of STAGE_DEFS){
+    used += d.q;
+    if(questionCount < used) return d;
+  }
+  // ST11以降は最終ステージを繰り返す
+  return STAGE_DEFS[STAGE_DEFS.length - 1];
+}
+
+function getStage(){ return getStageDef().st; }
+
+function waveSpeed(){
+  if(getStageDef().st === 19) return BASE_SPEED * 0.65; // 鬼面はやや遅く
+  return BASE_SPEED;
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
+// 選択肢をシャッフルするユーティリティ
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+// 問題データ（bpm: 心拍数 → QRS間隔計算に使用）
+// AF/VF/心房粗動など不規則なものは代表値、PVCは基本+異所性
+const QUESTIONS_RAW = [
+  {img:'ecg/1.jpg',answer:'正常',choices:['正常','心房細動（AF）','心室期外収縮（PVC）','心房期外収縮（PAC）'],hint:'基本となる波形',bpm:75},
+  {img:'ecg/2.jpg',answer:'心室期外収縮（PVC）',choices:['正常','心房細動（AF）','心室期外収縮（PVC）','心房期外収縮（PAC）'],hint:'Pを欠く幅広QRS',bpm:75},
+  {img:'ecg/3.jpg',answer:'心房期外収縮（PAC）',choices:['正常','心房細動（AF）','心室期外収縮（PVC）','心房期外収縮（PAC）'],hint:'Pを伴う幅狭QRS',bpm:75},
+  {img:'ecg/4.jpg',answer:'左室肥大',choices:['正常','左室肥大','心室期外収縮（PVC）','心房期外収縮（PAC）'],hint:'V5の高いR波とST-T変化',bpm:72},
+  {img:'ecg/5.jpg',answer:'右脚ブロック',choices:['左脚ブロック','心室期外収縮（PVC）','心房期外収縮（PAC）','右脚ブロック'],hint:"幅広QRSとV1のrSR'",bpm:72},
+  {img:'ecg/6.jpg',answer:'左脚ブロック',choices:['左脚ブロック','心室期外収縮（PVC）','心房期外収縮（PAC）','右脚ブロック'],hint:'幅広QRSとV1のrS/QS',bpm:72},
+  {img:'ecg/7.jpg',answer:'心房細動（AF）',choices:['心房細動（AF）','心室期外収縮（PVC）','心房期外収縮（PAC）','心房粗動（AFL）'],hint:'Pなく絶対不整',bpm:75},
+  {img:'ecg/8.jpg',answer:'心房粗動（AFL）',choices:['心房細動（AF）','心室期外収縮（PVC）','心房期外収縮（PAC）','心房粗動（AFL）'],hint:'基線のノコギリ波形',bpm:75},
+  {img:'ecg/9.jpg',answer:'発作性上室頻拍（PSVT）',choices:['心室頻拍（VT）','心室期外収縮（PVC）','心房期外収縮（PAC）','発作性上室頻拍（PSVT）'],hint:'規則正しい幅狭QRS頻脈',bpm:180},
+  {img:'ecg/10.jpg',answer:'心室頻拍（VT）',choices:['心室頻拍（VT）','頻脈性心房細動（rapid AF)','心室期外収縮（PVC）','心房期外収縮（PAC）'],hint:'規則正しい幅広QRS頻脈',bpm:160},
+  {img:'ecg/11.jpg',answer:'洞頻脈',choices:['正常','心房細動（AF）','洞頻脈','心房期外収縮（PAC）'],hint:'心拍数が100回以上',bpm:110},
+  {img:'ecg/12.jpg',answer:'洞徐脈',choices:['洞頻脈','心房細動（AF）','心房期外収縮（PAC）','洞徐脈'],hint:'心拍数が50回未満',bpm:42},
+  {img:'ecg/13.jpg',answer:'頻脈性心房細動（rapid AF)',choices:['正常','頻脈性心房細動（rapid AF)','心室期外収縮（PVC）','心房期外収縮（PAC）'],hint:'Pなく絶対不整の頻脈',bpm:130},
+  {img:'ecg/14.jpg',answer:'徐脈性心房細動（slow AF）',choices:['正常','徐脈性心房細動（slow AF）','心室期外収縮（PVC）','心房期外収縮（PAC）'],hint:'Pなく絶対不整の徐脈',bpm:45},
+  {img:'ecg/15.jpg',answer:'ウェンケバッハ型（2度房室）ブロック',choices:['ウェンケバッハ型（2度房室）ブロック','徐脈性心房細動（slow AF）','心房期外収縮（PAC）','3度（完全）房室ブロック'],hint:'漸増PRとQRS脱落',bpm:50},
+  {img:'ecg/16.jpg',answer:'3度（完全）房室ブロック',choices:['ウェンケバッハ型（2度房室）ブロック','徐脈性心房細動（slow AF）','洞徐脈','3度（完全）房室ブロック'],hint:'PとQRSの独立徐脈',bpm:38},
+  {img:'ecg/17.jpg',answer:'心室期外収縮（PVC）連発',choices:['洞頻脈','ペーシング','心室期外収縮（PVC）連発','心房期外収縮（PAC）連発'],hint:'3連以上ならVT',bpm:80},
+  {img:'ecg/18.jpg',answer:'心室細動（VF）',choices:['頻脈性心房細動（rapid AF）','心室頻拍（VT）','心室細動（VF）','発作性上室頻拍（PSVT）'],hint:'P・QRS・Tが判読不能',bpm:300},
+  {img:'ecg/19.jpg',answer:'ST低下',choices:['陰性T波','ST低下','ペーシング','右脚ブロック'],hint:'aVRではST上昇',bpm:72},
+  {img:'ecg/20.jpg',answer:'前壁の陳旧性心筋梗塞（OMI）',choices:['前壁の陳旧性心筋梗塞（OMI）','下壁の陳旧性心筋梗塞（OMI）','前壁の急性心筋梗塞（AMI）','左脚ブロック'],hint:'V1-4の異常Q＋陰性T',bpm:68},
+  {img:'ecg/21.jpg',answer:'前壁の急性心筋梗塞（AMI）',choices:['前壁の急性心筋梗塞（AMI）','下壁の急性心筋梗塞（AMI）','前壁の陳旧性心筋梗塞（OMI）','左脚ブロック'],hint:'V1-4のST上昇',bpm:90},
+  {img:'ecg/22.jpg',answer:'下壁の陳旧性心筋梗塞（OMI）',choices:['右脚ブロック','前壁の陳旧性心筋梗塞（OMI）','下壁の陳旧性心筋梗塞（OMI）','下壁の急性心筋梗塞（AMI）'],hint:'下壁の異常Q＋陰性T',bpm:65},
+  {img:'ecg/23.jpg',answer:'下壁の急性心筋梗塞（AMI）',choices:['左脚ブロック','下壁の陳旧性心筋梗塞（OMI）','前壁の急性心筋梗塞（AMI）','下壁の急性心筋梗塞（AMI）'],hint:'下壁誘導のST上昇',bpm:88},
+  {img:'ecg/24.jpg',answer:'陰性T波',choices:['右脚ブロック','陰性T波','ST低下','左脚ブロック'],hint:'通常V3-6でT波は上向き',bpm:72},
+  {img:'ecg/25.jpg',answer:'心膜炎',choices:['正常','前壁の急性心筋梗塞（AMI）','心膜炎','下壁の急性心筋梗塞（AMI）'],hint:'多誘導で軽度ST上昇',bpm:95},
+  {img:'ecg/26.jpg',answer:'WPW症候群',choices:['左脚ブロック','WPW症候群','右脚ブロック','心室期外収縮（PVC）'],hint:'短いPR＋デルタ波＋幅広QRS',bpm:78},
+  {img:'ecg/27.jpg',answer:'心房期外収縮（PAC）連発',choices:['正常','心室期外収縮（PVC）連発','心房期外収縮（PAC）連発','心室頻拍（VT）'],hint:'30秒以上でAF',bpm:80},
+  {img:'ecg/28.jpg',answer:'偽性心室頻拍（俗称）',choices:['洞頻脈','心室頻拍（VT）','偽性心室頻拍（俗称）','発作性上室頻拍（PSVT）'],hint:'不規則な幅広QRS頻脈',bpm:130},
+  {img:'ecg/29.jpg',answer:'QT延長',choices:['ST-T変化','QT延長','心室期外収縮（PVC）','前壁の陳旧性心筋梗塞（OMI）'],hint:'TがRRの概ね半分以上',bpm:65},
+    { img: 'ecg/30.jpg', answer: '洞不全',       choices: ['ウェンケバッハ型（2度房室）ブロック', '徐脈性心房細動（slow AF）', '洞不全', '3度（完全）房室ブロック'],hint: '洞機能低下による徐脈',bpm:38},
+    {img:'ecg/31.jpg',answer:'房室ペーシング',choices:['左脚ブロック','心室期外収縮（PVC）','房室ペーシング','右脚ブロック'],hint:'PとQRS前のスパイク',bpm:70},
+    {img:'ecg/32.jpg',answer:'巨大陰性T波',choices:['ST低下','左脚ブロック','右脚ブロック','巨大陰性T波'],hint:'心尖部肥大型心筋症で多い',bpm:68},
+  {img:'ecg/33.jpg',answer:'前側壁の急性心筋梗塞（AMI）',choices:['下壁の急性心筋梗塞（AMI）','前壁の急性心筋梗塞（AMI）','側壁の急性心筋梗塞（AMI）','前側壁の急性心筋梗塞（AMI）'],hint:'ⅠとaVLにもST上昇あり',bpm:88},
+    {img:'ecg/34.jpg',answer:'上室期外収縮（PAC）の2連発',choices:['上室期外収縮（PAC）の2連発','心室期外収縮（PVC）の2連発','発作性上室頻拍（PSVT）','心房細動（AF）'],hint:'上室期外収縮は間入性に生じない',bpm:72},
+  {img:'ecg/35.jpg',answer:'右房拡大',choices:['右房拡大','左房拡大','左室肥大','正常'],hint:'下壁誘導でP＞2.5mm',bpm:75},
+  {img:'ecg/36.jpg',answer:'交互脈＋QT延長',choices:['交互脈＋QT延長','左脚ブロック','右脚ブロック','QT延長のみ'],hint:'T波の波形が交互に変化',bpm:68},
+  {img:'ecg/37.jpg',answer:'右脚ブロック＋左室肥大',choices:['右脚ブロック＋左室肥大','左脚ブロック','右脚ブロックのみ','左室肥大のみ'],hint:'右脚ブロックは左室肥大が判定可能',bpm:72},
+  {img:'ecg/38.jpg',answer:'高度房室ブロック',choices:['高度房室ブロック','3度（完全）房室ブロック','ウェンケバッハ型（2度房室）ブロック','モビッツⅡ型（2度房室）ブロック'],hint:'伝導が3：1以下の時に診断',bpm:40},
+  {img:'ecg/39.jpg',answer:'下壁誘導のJ波',choices:['下壁誘導のJ波','早期再分極','WPW症候群','右脚ブロック'],hint:'失神歴があれば特発性心室細動の可能性',bpm:60},
+  {img:'ecg/40.jpg',answer:'心室ペーシング',choices:['心室ペーシング','房室ペーシング','心房ペーシング','左脚ブロック'],hint:'QRS直前にペーシングスパイク',bpm:70},
+  {img:'ecg/41.jpg',answer:'心房ペーシング',choices:['心房ペーシング','房室ペーシング','心室ペーシング','両室ペーシング'],hint:'P直前にペーシングスパイク',bpm:70},
+  {img:'ecg/42.jpg',answer:'左脚ブロック＋左軸偏位',choices:['左脚ブロック＋左軸偏位','右脚ブロック＋左軸偏位','左脚ブロック＋右軸偏位','右脚ブロック＋右軸偏位'],hint:'Ⅱ誘導が下向き',bpm:65},
+  {img:'ecg/43.jpg',answer:'増高T波',choices:['増高T波','平低T波','陰性T波','早期再分極'],hint:'陽性T波の高さ＞12mm',bpm:72},
+  {img:'ecg/44.jpg',answer:'右軸偏位',choices:['右軸偏位','左軸偏位','正常','右室肥大'],hint:'I誘導が下向き',bpm:75},
+  {img:'ecg/45.jpg',answer:'肢誘導の低電位差',choices:['肢誘導の低電位差','全誘導の低電位差','胸部誘導の低電位差','正常'],hint:'全肢誘導でQRS振幅＜5mm',bpm:72},
+  {img:'ecg/46.jpg',answer:'右脚ブロック＋ST-T変化',choices:['右脚ブロック＋ST-T変化','右脚ブロックのみ','右脚ブロック＋左室肥大','ST-T変化のみ'],hint:'V3-4誘導の陰性T波',bpm:70},
+  {img:'ecg/47.jpg',answer:'右脚ブロック＋左軸偏位',choices:['右脚ブロック＋左軸偏位','右脚ブロック＋左室肥大','右脚ブロック＋不定軸','右脚ブロック＋右軸偏位'],hint:'いわゆる二枝ブロック',bpm:68},
+  {img:'ecg/48.jpg',answer:'時計方向回転',choices:['時計方向回転','反時計方向回転','右室肥大','左室肥大'],hint:'R波の移行帯がV5〜V6',bpm:72},
+  {img:'ecg/49.jpg',answer:'右脚ブロック＋左軸偏位＋1度房室ブロック',choices:['右脚ブロック＋左軸偏位＋1度房室ブロック','右脚ブロック＋右軸偏位','高度房室ブロック','3度（完全）房室ブロック'],hint:'いわゆる三枝ブロック',bpm:62},
+  {img:'ecg/50.jpg',answer:'変行伝導を伴った心房二段脈',choices:['変行伝導を伴った心房二段脈','心室二段脈','左脚ブロック','心房細動（AF）'],hint:'右脚は左脚より不応期が長い',bpm:75},
+  {img:'ecg/51.jpg',answer:'前壁の陳旧性心筋梗塞（OMI）＋右脚ブロック',choices:['前壁の陳旧性心筋梗塞（OMI）＋右脚ブロック','前壁の急性心筋梗塞（AMI）','右脚ブロックのみ','前壁の陳旧性心筋梗塞（OMI）のみ'],hint:'V1-4の異常Q波',bpm:65},
+  {img:'ecg/52.jpg',answer:'QT短縮',choices:['QT短縮','QT延長','ジギタリス効果','正常'],hint:'QT時間が300ms以内',bpm:72},
+  {img:'ecg/53.jpg',answer:'右脚ブロック＋右軸偏位',choices:['右脚ブロック＋右軸偏位','右脚ブロック＋左軸偏位','右室肥大','右脚ブロックのみ'],hint:'Ⅰ誘導で下向き',bpm:68},
+  {img:'ecg/54.jpg',answer:'人工心電図波形',choices:['人工心電図波形','左室肥大','右室肥大','両室肥大'],hint:'機械のテストに仕様',bpm:72},
+  {img:'ecg/55.jpg',answer:'左脚ブロック＋洞頻脈',choices:['左脚ブロック＋洞頻脈','心室頻拍（VT）','左脚ブロックのみ','頻脈性心房細動（rapid AF）'],hint:'Pを見落とさない',bpm:110},
+  {img:'ecg/56.jpg',answer:'下壁の急性心筋梗塞（AMI）＋2度房室ブロック',choices:['下壁の急性心筋梗塞（AMI）＋2度房室ブロック','下壁の急性心筋梗塞（AMI）のみ','前壁の急性心筋梗塞（AMI）＋2度房室ブロック','2度房室ブロックのみ'],hint:'V1でT波上にあるPを見逃さない',bpm:60},
+  {img:'ecg/57.jpg',answer:'右脚ブロック＋2度房室ブロック',choices:['右脚ブロック＋2度房室ブロック','3度（完全）房室ブロック','高度房室ブロック','右脚ブロックのみ'],hint:'Pの2：1伝導',bpm:50},
+  {img:'ecg/58.jpg',answer:'2度房室ブロック＋1度房室ブロック',choices:['2度房室ブロック＋1度房室ブロック','ウェンケバッハ型（2度房室）ブロック','3度（完全）房室ブロック','高度房室ブロック'],hint:'Pの2：1伝導',bpm:50},
+  {img:'ecg/59.jpg',answer:'2：1伝導の心房粗動（AFL）',choices:['2：1伝導の心房粗動（AFL）','頻脈性心房細動（rapid AF）','発作性上室頻拍（PSVT）','洞頻脈'],hint:'ST-T部分に注目',bpm:150},
+  {img:'ecg/60.jpg',answer:'左脚ブロック＋頻脈性心房細動（rapid AF）',choices:['左脚ブロック＋頻脈性心房細動（rapid AF）','心室頻拍（VT）','偽性心室頻拍（俗称）','左脚ブロックのみ'],hint:'Pなく絶対不整',bpm:130},
+  {img:'ecg/61.jpg',answer:'心房粗動＋心室ペーシング',choices:['心房粗動＋心室ペーシング','心房ペーシングのみ','心房粗動（AFL）のみ','心室ペーシングのみ'],hint:'QRS直前のスパイク',bpm:70},
+  {img:'ecg/62.jpg',answer:'心室頻拍＋胸部誘導の低電位差',choices:['心室頻拍＋胸部誘導の低電位差','偽性心室頻拍（俗称）','頻脈性心房細動（rapid AF）','発作性上室頻拍（PSVT）'],hint:'解離したPを散見',bpm:160},
+  {img:'ecg/63.jpg',answer:'3度（完全）房室ブロック＋QT延長',choices:['3度（完全）房室ブロック＋QT延長','3度（完全）房室ブロックのみ','高度房室ブロック','QT延長のみ'],hint:'PとQRSの関係に注目',bpm:38},
+  {img:'ecg/64.jpg',answer:'平低T波',choices:['平低T波','陰性T波','ST低下','正常'],hint:'T波の振幅が1mm未満',bpm:72},
+  {img:'ecg/65.jpg',answer:'前側壁の急性心筋梗塞（AMI）',choices:['前側壁の急性心筋梗塞（AMI）','前壁の陳旧性心筋梗塞（OMI）','心膜炎','早期再分極'],hint:'この直後に心室細動（VF）',bpm:90},
+  {img:'ecg/66.jpg',answer:'下壁の急性心筋梗塞（AMI）',choices:['下壁の急性心筋梗塞（AMI）','心室頻拍（VT）','心室期外収縮（PVC）連発','下壁の陳旧性心筋梗塞（OMI）'],hint:'一見、心室頻拍（VT）様だが...',bpm:88},
+  {img:'ecg/67.jpg',answer:'ブルガダ症候群',choices:['ブルガダ症候群','右脚ブロックのみ','早期再分極','前壁の急性心筋梗塞（AMI）'],hint:'右脚ブロック＋独特なST波形',bpm:65},
+  {img:'ecg/68.jpg',answer:'一時的な心室ペーシング',choices:['一時的な心室ペーシング','一時的な房室ペーシング','心室期外収縮（PVC）連発','左脚ブロック'],hint:'前半はQRS直前にスパイク',bpm:70},
+  {img:'ecg/69.jpg',answer:'不完全右脚ブロック＋完全右脚ブロック',choices:['不完全右脚ブロック＋完全右脚ブロック','不完全右脚ブロックのみ','完全右脚ブロックのみ','右室肥大'],hint:'後半はQRS波形が変化',bpm:72},
+  {img:'ecg/70.jpg',answer:'洞停止＋増高T波',choices:['洞停止＋増高T波','洞停止＋平低T波','三枝ブロック','3度（完全）房室ブロック'],hint:'血中カリウム濃度は8.4mEq/L',bpm:40},
+  {img:'ecg/71.jpg',answer:'心膜炎',choices:['心膜炎','前壁の急性心筋梗塞（AMI）','早期再分極','下壁の急性心筋梗塞（AMI）'],hint:'PQ部分の低下にも注目',bpm:95},
+  {img:'ecg/72.jpg',answer:'S1Q3T3パターン',choices:['S1Q3T3パターン','左室肥大','前壁の陳旧性心筋梗塞（OMI）','下壁の急性心筋梗塞（AMI）'],hint:'本例は肺血栓塞栓症',bpm:110},
+  {img:'ecg/73.jpg',answer:'肢誘導のつけ間違い＋右脚ブロック',choices:['肢誘導のつけ間違い＋右脚ブロック','全誘導のつけ間違い＋右脚ブロック','肢誘導のつけ間違い＋右脚ブロック','右脚ブロックのみ'],hint:'陰性Ⅰと陽性aVRなら人為ミスを疑う',bpm:72},
+  {img:'ecg/74.jpg',answer:'心室二段脈＋前壁の陳旧性心筋梗塞（OMI）',choices:['心室二段脈＋前壁の陳旧性心筋梗塞（OMI）','心室二段脈のみ','前壁の陳旧性心筋梗塞（OMI）のみ','心室頻拍（VT）'],hint:'自己波と期外収縮を分けて診断',bpm:75},
+  {img:'ecg/75.jpg',answer:'左房拡大＋左室肥大',choices:['左房拡大＋左室肥大','左室肥大のみ','左房拡大のみ','右房拡大＋右室肥大'],hint:'V1の陰性Pに注目',bpm:72},
+  {img:'ecg/76.jpg',answer:'不定軸＋R波の増高不良（減高）',choices:['不定軸＋R波の増高不良（減高）','胸部誘導のつけ間違い','肢誘導のつけ間違い','正常'],hint:'本例は完全内臓逆位',bpm:72},
+  {img:'ecg/77.jpg',answer:'非伝導性の心房期外収縮（PAC）',choices:['非伝導性の心房期外収縮（PAC）','洞停止','洞不全','2度房室ブロック'],hint:'ST上のPを見逃さない',bpm:72},
+  {img:'ecg/78.jpg',answer:'洞房ブロック',choices:['洞房ブロック','洞停止','非伝導性の心房期外収縮（PAC）','ウェンケバッハ型（2度房室）ブロック'],hint:'長いRR間隔が通常の2倍',bpm:55},
+  {img:'ecg/79.jpg',answer:'右脚ブロック＋下壁の陳旧性心筋梗塞（OMI）',choices:['右脚ブロック＋下壁の陳旧性心筋梗塞（OMI）','右脚ブロックのみ','下壁の陳旧性心筋梗塞（OMI）のみ','右脚ブロック＋下壁の急性心筋梗塞（AMI）'],hint:'異常Q波は常に探しに行く',bpm:68},
+  {img:'ecg/80.jpg',answer:'心室頻拍（VT）＋左脚ブロック',choices:['心室頻拍（VT）＋左脚ブロック','左脚ブロックのみ','心室頻拍（VT）のみ','偽性心室頻拍（俗称）'],hint:'不整脈と自己波を分けて診断',bpm:160},
+  {img:'ecg/81.jpg',answer:'心房細動＋3度（完全）房室ブロック',choices:['心房細動＋3度（完全）房室ブロック','心房細動（AF）のみ','徐脈性心房細動（slow AF）','3度（完全）房室ブロックのみ'],hint:'心房細動なのに規則正しいRR間隔',bpm:38},
+  {img:'ecg/82.jpg',answer:'下壁の急性心筋梗塞（AMI）＋右脚ブロック',choices:['下壁の急性心筋梗塞（AMI）＋右脚ブロック','右脚ブロックのみ','下壁の急性心筋梗塞（AMI）のみ','下壁の陳旧性心筋梗塞（OMI）＋右脚ブロック'],hint:'ST上昇は常に探しに行く',bpm:70},
+  {img:'ecg/83.jpg',answer:'右脚ブロック＋1度房室ブロック',choices:['右脚ブロック＋1度房室ブロック','右脚ブロックのみ','右脚ブロック＋左軸偏位','1度房室ブロックのみ'],hint:'PQの変化は見落としやすい',bpm:65},
+  {img:'ecg/84.jpg',answer:'発作性心房細動（PAF）',choices:['発作性心房細動（PAF）','心房細動（AF）','心房期外収縮（PAC）連発','心房粗動（AFL）'],hint:'直後の心房期外収縮（PAC）がトリガー',bpm:130},
+  {img:'ecg/85.jpg',answer:'後壁の急性心筋梗塞（AMI）',choices:['後壁の急性心筋梗塞（AMI）','前壁の急性心筋梗塞（AMI）','下壁の急性心筋梗塞（AMI）','側壁の急性心筋梗塞（AMI）'],hint:'イメージはV1-3波形の上下反転',bpm:75},
+  {img:'ecg/86.jpg',answer:'トルサード・ド・ポアント',choices:['トルサード・ド・ポアント','心室細動（VF）','心室頻拍（VT）','偽性心室頻拍（俗称）'],hint:'QT延長を伴い自然停止しやすい',bpm:220},
+  {img:'ecg/87.jpg',answer:'心室粗動',choices:['心室粗動','心室細動（VF）','心室頻拍（VT）','トルサード・ド・ポアント'],hint:'心室頻拍（VT）なら毎分～250回',bpm:300},
+  {img:'ecg/88.jpg',answer:'後壁の陳旧性心筋梗塞（OMI）',choices:['後壁の陳旧性心筋梗塞（OMI）','右脚ブロック','左脚ブロック','前壁の陳旧性心筋梗塞（OMI）'],hint:'V1-2のR波とT波の増高',bpm:72},
+  {img:'ecg/89.jpg',answer:'間欠性WPW症候群',choices:['間欠性WPW症候群','左脚ブロック','心室期外収縮（PVC）','LGL症候群'],hint:'QRS波形の変化に注目',bpm:78},
+  {img:'ecg/90.jpg',answer:'移動性ペースメーカ',choices:['移動性ペースメーカ','多源性心房頻拍（MAT）','心房期外収縮（PAC）','洞不整脈'],hint:'Ⅱ誘導のPの形が変化',bpm:65},
+  {img:'ecg/91.jpg',answer:'房室解離',choices:['房室解離','3度（完全）房室ブロック','促進心室調律','高度房室ブロック'],hint:'QRSがPを追い越している...',bpm:72},
+  {img:'ecg/92.jpg',answer:'下壁の急性心筋梗塞（AMI）＋心房細動（AF）＋3度（完全）房室ブロック',choices:['下壁の急性心筋梗塞（AMI）＋心房細動（AF）＋3度（完全）房室ブロック','下壁の急性心筋梗塞（AMI）＋3度（完全）房室ブロック','下壁の急性心筋梗塞（AMI）のみ','下壁の急性心筋梗塞（AMI）＋心房細動（AF）'],hint:'常に慎重に診断',bpm:38},
+  {img:'ecg/93.jpg',answer:'冠静脈洞調律',choices:['冠静脈洞調律','多源性心房頻拍（MAT）','移動性ペースメーカ','正常洞調律'],hint:'下壁誘導で陰性P',bpm:55},
+  {img:'ecg/94.jpg',answer:'前側壁の急性心筋梗塞（AMI）＋右脚ブロック',choices:['前側壁の急性心筋梗塞（AMI）＋右脚ブロック','右脚ブロックのみ','前壁の急性心筋梗塞（AMI）のみ','側壁の急性心筋梗塞（AMI）のみ'],hint:'右脚ブロックに惑わされない',bpm:88},
+  {img:'ecg/95.jpg',answer:'前壁と下壁の陳旧性心筋梗塞（OMI）',choices:['前壁と下壁の陳旧性心筋梗塞（OMI）','前壁の陳旧性心筋梗塞（OMI）のみ','下壁の陳旧性心筋梗塞（OMI）のみ','全誘導低電位差'],hint:'R波高の総和が小さい',bpm:68},
+  {img:'ecg/96.jpg',answer:'発作性上室頻拍（PSVT）',choices:['発作性上室頻拍（PSVT）','心室頻拍（VT）','心室細動（VF）','洞頻脈'],hint:'心室期外収縮から心室頻拍（VT）は否定的',bpm:180},
+  {img:'ecg/97.jpg',answer:'呼吸性変動',choices:['呼吸性変動','冠静脈洞調律','移動性ペースメーカ','洞徐脈'],hint:'心拍数は吸気時に早くなる',bpm:60},
+  {img:'ecg/98.jpg',answer:'房室ペーシング＋ペースメーカ機能不全',choices:['房室ペーシング＋ペースメーカ機能不全','房室ペーシング（正常）','心室ペーシング（正常）','心室期外収縮（PVC）'],hint:'心室リードの絶縁被覆損傷あり',bpm:70},
+  {img:'ecg/99.jpg',answer:'両室ペーシング（心臓再同期療法）',choices:['両室ペーシング（心臓再同期療法）','通常の房室ペーシング','通常の心室ペーシング','左脚ブロック'],hint:'スパイク後の狭いQRS波形',bpm:70},
+  {img:'ecg/100.jpg',answer:'左室肥大＋QT延長＋巨大陰性T波',choices:['左室肥大＋QT延長＋巨大陰性T波','巨大陰性T波のみ','左室肥大のみ','QT延長のみ'],hint:'本例はたこつぼ心筋症',bpm:72}
+];
+
+// 毎回choicesをシャッフルしてQUESTIONSを生成
+function makeQuestions(){
+  return QUESTIONS_RAW.map(q=>({
+    ...q,
+    choices: shuffle(q.choices)
+  }));
+}
+
+const canvas  = document.getElementById('canvas');
+const ctx     = canvas.getContext('2d');
+const ecgArea = document.getElementById('ecg-area');
+let W, H;
+
+// --- state ---
+let gameState='idle', score=0, level=1, combo=0; // score kept for internal use
+let goState = null; // ゲームオーバーシーケンス管理 {phase, t, bpm, lastBeat}
+let comboTimer=null, frameId, lastTime=0;
+let celebFrameId=null;
+let _stageAnnEl=null; // showStageAnnounceのオーバーレイ要素
+let _annUiEl=null, _annCpEl=null; // showStageAnnounce中に非表示にしたUI要素
+let particles_arr=[];
+let currentWave=null, labelData=[], answered=false, usedIndices=[];
+let QUESTIONS=[];
+let slimes=[];         // スライム配列
+let _savedSlimes=[];   // 心電図消去時のスライム位置保存
+let resultMark=null;   // 正解/不正解マーク {type:'ok'|'ng', progress:0, done:false}
+let gameOverAnim=null; // ゲームオーバーアニメ {progress:0}
+let spotlight=null;    // スポットライト {x,y,tx,ty,r,moveTimer}
+// ステージ演出フラグ（spawnWave時にステージに応じて決定）
+let stageEffects = { slime:false, spotlight:false, invert:false };
+let dischargeX = 0;       // 放電先端のX座標（左→右）
+let targetDischargeX = 0; // 放電先端の目標X座標
+let dischargeMinX = 0;    // 放電管辺縁（最小値）
+// 心臓の固定パラメータ（resize後に更新）
+let heartBaseSize = 80;
+let heartX = 0, heartY = -999; // 心臓の中心座標（onload前は-999）
+
+// wave.webp（電離線の代わり）
+const waveImg = new Image();
+waveImg.src = 'discharge.webp';
+waveImg.onerror = () => { waveImg.src = 'discharge.jpg'; };
+
+// heart.webp（拍動する心臓）
+const heartImg = new Image();
+heartImg.src = 'heart.webp';
+heartImg.onerror = () => { heartImg.src = 'heart.jpg'; };
+
+// clear images
+const clearImg  = new Image(); clearImg.src  = 'clear.webp'; // 鬼面
+const clear1Img = new Image(); clear1Img.src = 'clear1.webp'; // 表面
+const clear2Img = new Image(); clear2Img.src = 'clear2.webp'; // 裏面
+
+// gameover.webp
+const gameoverImg = new Image();
+gameoverImg.src = 'gameover.webp';
+
+// 心臓拍動状態 { scale, phase:'idle'|'beat', t }
+let heartBeat = { scale:1.0, phase:'idle', t:0 };
+
+// ===== 星背景 =====
+const STAR_LAYERS_ECG = [
+  { speed: 0.06, count: 50, rMin: 0.3, rMax: 0.9, aMin: 0.2, aMax: 0.5 },
+  { speed: 0.15, count: 30, rMin: 0.6, rMax: 1.3, aMin: 0.4, aMax: 0.7 },
+  { speed: 0.30, count: 14, rMin: 1.0, rMax: 2.0, aMin: 0.6, aMax: 1.0 },
+];
+let _ecgStarCaches = [null, null, null];
+let _ecgStarBuilt = false;
+let ecgStarScroll = 0;
+
+function buildEcgStarCaches() {
+  if (_ecgStarBuilt && _ecgStarCaches[0]) return;
+  _ecgStarBuilt = true;
+  STAR_LAYERS_ECG.forEach((layer, li) => {
+    const TH = (H || 800) * 4;
+    const cW = (W || 400);
+    const oc = document.createElement('canvas');
+    oc.width = cW; oc.height = TH;
+    const c = oc.getContext('2d');
+    c.clearRect(0, 0, cW, TH);
+    // ネビュラ（遠景のみ）
+    if (li === 0) {
+      c.save(); c.globalCompositeOperation = 'screen';
+      const blobs = [
+        { x: cW*0.2, y: TH*0.15, r: cW*0.55, hue: 220, a: 0.06 },
+        { x: cW*0.75, y: TH*0.40, r: cW*0.50, hue: 260, a: 0.05 },
+        { x: cW*0.45, y: TH*0.70, r: cW*0.60, hue: 200, a: 0.055 },
+        { x: cW*0.15, y: TH*0.88, r: cW*0.48, hue: 180, a: 0.045 },
+      ];
+      for (const bl of blobs) {
+        const g = c.createRadialGradient(bl.x, bl.y, 0, bl.x, bl.y, bl.r);
+        g.addColorStop(0,   `hsla(${bl.hue},70%,35%,${bl.a})`);
+        g.addColorStop(0.5, `hsla(${bl.hue},55%,22%,${bl.a*0.5})`);
+        g.addColorStop(1,   'rgba(0,0,0,0)');
+        c.fillStyle = g; c.beginPath(); c.arc(bl.x, bl.y, bl.r, 0, Math.PI*2); c.fill();
+      }
+      c.restore();
+    }
+    // 星を散りばめる
+    for (let i = 0; i < layer.count * 4; i++) {
+      const sx = Math.random() * cW;
+      const sy = Math.random() * TH;
+      const r  = layer.rMin + Math.random() * (layer.rMax - layer.rMin);
+      const a  = layer.aMin + Math.random() * (layer.aMax - layer.aMin);
+      c.beginPath(); c.arc(sx, sy, r, 0, Math.PI*2);
+      // 少し青白い色味
+      const bright = 200 + Math.floor(Math.random() * 55);
+      const blue   = Math.min(255, bright + Math.floor(Math.random() * 30));
+      c.fillStyle = `rgba(${bright},${bright},${blue},${a})`;
+      c.fill();
+      // 明るい星にグロー
+      if (r > 1.3) {
+        const g2 = c.createRadialGradient(sx, sy, 0, sx, sy, r * 3);
+        g2.addColorStop(0,   `rgba(${bright},${bright},${blue},${a * 0.4})`);
+        g2.addColorStop(1,   'rgba(0,0,0,0)');
+        c.fillStyle = g2; c.beginPath(); c.arc(sx, sy, r * 3, 0, Math.PI*2); c.fill();
+      }
+    }
+    _ecgStarCaches[li] = oc;
+  });
+}
+
+// 流れ星
+let ecgShootingStars = [];
+let ecgShootingStarTimer = 2 + Math.random() * 4;
+
+function spawnEcgShootingStar() {
+  const fromLeft = Math.random() < 0.5;
+  const angle = (Math.PI / 5) + Math.random() * (Math.PI / 6);
+  const speed = 350 + Math.random() * 250;
+  const len   = 60  + Math.random() * 80;
+  const x = fromLeft ? -len : (W || 400) + len;
+  const y = Math.random() * (H || 800) * 0.7;
+  const vx = fromLeft ? Math.cos(angle) * speed : -Math.cos(angle) * speed;
+  const vy = Math.abs(Math.sin(angle) * speed);
+  ecgShootingStars.push({ x, y, vx, vy, len, life: 1.0,
+    maxLife: 0.5 + Math.random() * 0.4, alpha: 0.85 + Math.random() * 0.15 });
+}
+
+function updateAndDrawEcgShootingStars(dt) {
+  ecgShootingStarTimer -= dt / 1000;
+  if (ecgShootingStarTimer <= 0) {
+    spawnEcgShootingStar();
+    ecgShootingStarTimer = 5 + Math.random() * 14;
+  }
+  for (let i = ecgShootingStars.length - 1; i >= 0; i--) {
+    const s = ecgShootingStars[i];
+    s.x += s.vx * (dt / 1000);
+    s.y += s.vy * (dt / 1000);
+    s.life -= (dt / 1000) / s.maxLife;
+    if (s.life <= 0) { ecgShootingStars.splice(i, 1); continue; }
+    const a  = s.life * s.alpha;
+    const sp = Math.hypot(s.vx, s.vy);
+    const nx = -s.vx / sp, ny = -s.vy / sp;
+    const grad = ctx.createLinearGradient(s.x, s.y, s.x + nx * s.len, s.y + ny * s.len);
+    grad.addColorStop(0,   `rgba(255,255,255,${a})`);
+    grad.addColorStop(0.3, `rgba(200,220,255,${a * 0.6})`);
+    grad.addColorStop(1,   'rgba(180,200,255,0)');
+    ctx.save();
+    ctx.strokeStyle = grad; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x + nx * s.len, s.y + ny * s.len); ctx.stroke();
+    ctx.globalAlpha = a; ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(s.x, s.y, 1.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+// QRSスケジュール: [{timeMs}] 心電図開始からのQRS発火時刻リスト
+let qrsSchedule = [];
+let waveStartTime = 0; // currentWaveが表示開始した performance.now()
+
+let cursorInterval=null; // stopCursor用
+
+// DOM refs
+const scoreEl      = document.getElementById('score');
+const levelEl      = document.getElementById('level');
+const hiscoreEl    = document.getElementById('hiscore');
+let hiScore = 0;
+const labelsRow    = document.getElementById('labels-row');
+const hintArea     = document.getElementById('hint-area');
+const hintText     = document.getElementById('hint-text');
+const overlay      = document.getElementById('overlay');
+
+function resize(){
+
+  const dpr = window.devicePixelRatio || 1;
+
+  W = ecgArea.offsetWidth;
+  H = ecgArea.offsetHeight;
+
+  // 実ピクセル
+  canvas.width  = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+
+  // 見た目サイズ
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+
+  // 座標系をCSSピクセル基準へ
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // シャープ化
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  // 画面サイズ変更時に星キャッシュを再生成
+  _ecgStarBuilt = false; _ecgStarCaches = [null,null,null];
+  // 心臓サイズ・座標は resize 時に確定（心電図高は後で決まるのでここでは仮値）
+  heartBaseSize = Math.min(W * 0.16, 65);
+
+  // 向き変更時: currentWaveがあればheart位置を再計算
+  if(typeof currentWave !== 'undefined' && currentWave && currentWave.ready){
+    const ww = W, wh = Math.round(H * 0.38);
+    const ecgBottom2 = (currentWave.y || 20) + wh;
+    const ecgRight2  = W;
+    const areaBelow2 = H - ecgBottom2;
+    heartY = Math.min(ecgBottom2 + Math.max(areaBelow2 * 0.15, 40), H - 60);
+    const hImgW2 = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 50;
+    heartBaseSize = hImgW2 / 2;
+    heartX = ecgRight2 - hImgW2 / 2 - 4;
+    // ヒントパネル位置も再調整
+    const hintEl3 = document.getElementById('hint-area');
+    if(hintEl3 && !hintEl3.classList.contains('hidden')){
+      const panelH2 = hintEl3.offsetHeight || 80;
+      const hintTop2 = heartY + (H - heartY) * 0.40;
+      const clampedY2 = Math.min(hintTop2, H - panelH2 - 4);
+      hintEl3.style.top = clampedY2 + 'px';
+      hintEl3.style.transform = 'translateX(-50%)';
+    }
+  }
+}
+resize();
+window.addEventListener('resize', resize);
+// 横向き↔縦向き切替時も resize を呼ぶ
+window.addEventListener('orientationchange', () => { setTimeout(resize, 200); });
+if(screen.orientation) screen.orientation.addEventListener('change', () => { setTimeout(resize, 200); });
+
+function stopCursor(){
+  if(cursorInterval){ clearInterval(cursorInterval); cursorInterval=null; }
+}
+
+function updateHint(q){
+  hintArea.classList.add('hidden');
+}
+
+function pickQuestion(){
+  const stageDef = getStageDef();
+  const [minQ, maxQ] = stageDef.qRange || [1, QUESTIONS_RAW.length];
+  const validIndices = [];
+  for(let i=0;i<QUESTIONS.length;i++){
+    const num = parseInt(QUESTIONS[i].img.replace('ecg/','').replace('.jpg',''));
+    if(num>=minQ && num<=maxQ) validIndices.push(i);
+  }
+  let avail = validIndices.filter(i=>!usedIndices.includes(i));
+  if(avail.length===0){ usedIndices=usedIndices.filter(i=>!validIndices.includes(i)); avail=validIndices; }
+  const idx=avail[Math.floor(Math.random()*avail.length)];
+  usedIndices.push(idx);
+  return QUESTIONS[idx];
+}
+
+function buildLabels(q){
+  labelsRow.innerHTML=''; labelData=[];
+  q.choices.forEach(name=>{
+    const el=document.createElement('div');
+    el.className='diag-label';
+    el.textContent=name;
+    el.addEventListener('click', ()=>{
+      if(gameState!=='playing'||answered) return;
+      const lbl=labelData.find(l=>l.text===name);
+      if(!lbl||lbl.hit) return;
+      if(lbl.correct) onCorrect(lbl); else onWrong(lbl);
+    });
+    labelsRow.appendChild(el);
+    labelData.push({text:name, correct:name===q.answer, el, hit:false});
+  });
+}
+
+function rand50(){ return Math.random() < 0.5; }
+
+function computeStageEffects(){
+  const d = getStageDef();
+  stageEffects = {
+    slime:     d.slime     === 'rand' ? rand50() : d.slime,
+    spotlight: d.spotlight === 'rand' ? rand50() : d.spotlight,
+    invert:    d.invert    === 'rand' ? rand50() : d.invert,
+  };
+}
+
+function spawnWave(q, resetDanger=false){
+  const spd=waveSpeed();
+  computeStageEffects();
+  const rot = stageEffects.invert ? Math.PI : 0;
+  const img=new Image();
+  img.onload=()=>{
+    const ratio=img.naturalWidth/img.naturalHeight;
+    // 心電図の高さをHの最大55%に制限（放電管・ハートが必ず収まるよう）
+    const maxEcgH = H * 0.62;
+    const naturalH = W / ratio;
+    const wh = Math.min(naturalH, maxEcgH);
+    const ww = wh * ratio; // 高さ制限した場合は幅も調整
+    currentWave.waveW = ww;
+    currentWave.h = wh;
+    currentWave.waveX = (W - ww) / 2; // 中央寄せ
+    currentWave.y = 8;  // HUDから少し離す
+    currentWave.ready=true;
+    waveStartTime = performance.now();
+    // gameLoopが未起動なら起動（showStageAnnounce経由でなく直接spawnWaveされた場合）
+    if(!frameId){ lastTime=performance.now(); frameId=requestAnimationFrame(gameLoop); }
+    // QRSスケジュール生成: bpmから10秒間のQRS発火時刻を計算
+    qrsSchedule = [];
+    const bpm = currentWave.q.bpm || 75;
+    // ecg/18.jpg(VF)は拍動を2倍速に
+    const isVF = currentWave.q.img === 'ecg/18.jpg';
+    const intervalMs = (60000 / bpm) * (isVF ? 0.5 : 1);
+    const ecgDurationMs = 10000;
+    for(let t = intervalMs * 0.3; t < ecgDurationMs; t += intervalMs){
+      qrsSchedule.push({ timeMs: t, lastCycle: -1 });
+    }
+    // 心臓・discharge 座標: 心電図下端から一定距離下
+    // ecg-areaの実際の高さを再取得（一部スマホでHが0のまま計算されるのを防ぐ）
+    const actualH = ecgArea.getBoundingClientRect().height || ecgArea.offsetHeight || H;
+    if(actualH > 0) H = actualH;
+    const ecgBottom = currentWave.y + wh;
+    const ecgRight  = currentWave.waveX + ww; // 心電図の右端
+    const ecgLeft   = currentWave.waveX;       // 心電図の左端
+    const areaBelow = H - ecgBottom;
+    // 心臓Y: ecg下端から下のエリアの20%位置、ただし画面内に収める
+    heartY = Math.min(ecgBottom + Math.max(areaBelow * 0.15, 40), H - 60);
+    // ハートサイズ確定（画像ロード済みなら実サイズ、未ならフォールバック）
+    const hImgW = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 50;
+    heartBaseSize = hImgW / 2;
+    // ハートは心電図右端の内側に確実に収まる位置
+    heartX = ecgRight - hImgW / 2 - 4;
+    // 放電管起点は心電図左端付近（drawDangerLine内で使用）
+    // ヒントパネルを電離線(heartY)より下に配置（重ならないよう）
+    const hintEl2 = document.getElementById('hint-area');
+    if(hintEl2){
+      const panelH = hintEl2.offsetHeight || 80;
+      // heartYから下の空間の40%位置にヒントを置く
+      const hintTop = heartY + (H - heartY) * 0.40;
+      const clampedY = Math.min(hintTop, H - panelH - 4);
+      hintEl2.style.top = clampedY + 'px';
+      hintEl2.style.transform = 'translateX(-50%)';
+    }
+    // 放電をリセット or 引き継ぎ
+    if(resetDanger){
+      dischargeX = dischargeMinX;
+      targetDischargeX = dischargeMinX;
+    }
+
+    // スポットライト
+    if(stageEffects.spotlight){
+      const isOni = getStageDef().st >= 19;
+      const sr = Math.min(W,currentWave.h)*0.36*1.5 * (isOni ? 0.6 : 1);
+      spotlight={
+        x: W*0.5, y: currentWave.y+currentWave.h*0.5,
+        tx:W*0.5, ty:currentWave.y+currentWave.h*0.5,
+        r: sr, moveTimer:0
+      };
+    } else {
+      spotlight=null;
+    }
+    // スライム: 保存位置があれば復元、なければ新規spawn
+    if(stageEffects.slime){
+      if(_savedSlimes.length > 0){
+        slimes = _savedSlimes.map(s=>({...s})); // 同位置で再開
+        _savedSlimes = [];
+      } else if(slimes.length === 0){
+        spawnSlimes();
+      }
+    } else {
+      slimes=[];
+      _savedSlimes=[];
+    }
+  };
+  img.src=q.img;
+  currentWave={img,waveX:0,waveW:W,y:20,h:80,
+    speed:spd, rot, alive:true, ready:false, q};
+  answered=false;
+  buildLabels(q);
+  // HUD進捗バーを現在のステージ進捗で更新
+  updateHUD(getStageDef().st);
+  // ヒントパネル更新
+  const hintEl     = document.getElementById('hint-text');
+  const hintArea   = document.getElementById('hint-area');
+  const stageDef   = getStageDef();
+  const hintStageEl= document.getElementById('hint-stage');
+  const hintLbl    = document.getElementById('hint-label');
+  if(hintEl && hintArea){
+    hintEl.style.color = '';
+    hintEl.style.fontSize = '';
+    if(hintStageEl) hintStageEl.innerHTML = '';
+
+    if(stageDef.st >= 19){
+      // 鬼面：「・・・」固定・通常パネル
+      hintArea.classList.remove('hidden');
+      hintArea.classList.remove('oni-mode');
+      if(hintLbl) hintLbl.style.display = '';
+      hintEl.style.display = '';
+      hintEl.innerHTML = '・・・';
+      hintEl.style.color = 'rgba(255,200,0,0.45)';
+      hintEl.style.fontSize = '13px';
+      // hint-area内の進捗バーがあれば削除
+      const oldProg = hintArea.querySelector('.oni-progress');
+      if(oldProg) oldProg.remove();
+    } else {
+      // 表面・裏面：常にヒント表示
+      hintArea.classList.remove('hidden');
+      hintArea.classList.remove('oni-mode');
+      if(hintLbl) hintLbl.style.display = '';
+      hintEl.style.display = '';
+      hintEl.innerHTML = q.hint || '';
+    }
+  }
+}
+
+function updateOniProgress(){
+  const hintArea = document.getElementById('hint-area');
+  if(!hintArea) return;
+  // 進捗グラフをhint-area内に表示
+  let prog = hintArea.querySelector('.oni-progress');
+  if(!prog){
+    prog = document.createElement('div');
+    prog.className = 'oni-progress';
+    prog.innerHTML = '<div class="oni-prog-label"></div><div class="oni-prog-bar-wrap"><div class="oni-prog-bar"></div></div>';
+    hintArea.appendChild(prog);
+  }
+  const oniDef2 = getStageDef();
+  const cleared = stageQCount;
+  const total   = oniDef2 ? oniDef2.q : 5;
+  const pct     = Math.min(100, (cleared / total) * 100);
+  prog.querySelector('.oni-prog-label').textContent = `${cleared} / ${total}`;
+  prog.querySelector('.oni-prog-bar').style.width = pct + '%';
+}
+
+function drawResultMark(){
+  if(!resultMark || !currentWave || !currentWave.ready) return;
+  const p = resultMark.progress;        // 0→1
+  const cx = W / 2;
+  const cy = currentWave.y + currentWave.h / 2;
+  const R  = Math.min(W, currentWave.h) * 0.28;
+  const ease = p < 0.5 ? 2*p*p : -1+(4-2*p)*p; // easeInOut
+
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, p * 3) * (p > 0.85 ? (1-p)*6.7 : 1);
+
+  if(resultMark.type === 'ok'){
+    // ── 丸 ──
+    // 背景フラッシュ
+    ctx.fillStyle = `rgba(0,255,120,${0.13 * ease})`;
+    ctx.fillRect(0, currentWave.y, W, currentWave.h);
+    // 大きな円（描画アニメ）
+    const arcEnd = -Math.PI/2 + Math.PI*2 * ease;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, -Math.PI/2, arcEnd);
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth   = R * 0.22;
+    ctx.lineCap     = 'round';
+    ctx.shadowColor = '#00ff88';
+    ctx.shadowBlur  = 30;
+    ctx.stroke();
+    // 中央グロー
+    const gOk = ctx.createRadialGradient(cx,cy,0,cx,cy,R*0.7);
+    gOk.addColorStop(0, `rgba(0,255,120,${0.22*ease})`);
+    gOk.addColorStop(1, 'rgba(0,255,120,0)');
+    ctx.fillStyle = gOk;
+    ctx.beginPath(); ctx.arc(cx,cy,R*0.7,0,Math.PI*2); ctx.fill();
+  } else {
+    // ── バツ ──
+    // 背景フラッシュ
+    ctx.fillStyle = `rgba(255,40,40,${0.15 * ease})`;
+    ctx.fillRect(0, currentWave.y, W, currentWave.h);
+    const arm = R * ease;
+    ctx.strokeStyle = '#ff3333';
+    ctx.lineWidth   = R * 0.22;
+    ctx.lineCap     = 'round';
+    ctx.shadowColor = '#ff2222';
+    ctx.shadowBlur  = 30;
+    // 1本目（左上→右下）
+    ctx.beginPath();
+    ctx.moveTo(cx - arm, cy - arm);
+    ctx.lineTo(cx + arm, cy + arm);
+    ctx.stroke();
+    // 2本目（右上→左下）
+    if(p > 0.4){
+      const arm2 = R * Math.min(1,(p-0.4)/0.6) * ease;
+      ctx.beginPath();
+      ctx.moveTo(cx + arm2, cy - arm2);
+      ctx.lineTo(cx - arm2, cy + arm2);
+      ctx.stroke();
+    }
+    // 中央グロー
+    const gNg = ctx.createRadialGradient(cx,cy,0,cx,cy,R*0.7);
+    gNg.addColorStop(0, `rgba(255,50,50,${0.2*ease})`);
+    gNg.addColorStop(1, 'rgba(255,50,50,0)');
+    ctx.fillStyle = gNg;
+    ctx.beginPath(); ctx.arc(cx,cy,R*0.7,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function spawnParticles(x,y,color,count=14){
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2, s=1.5+Math.random()*3.5;
+    particles_arr.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      life:1,decay:0.022+Math.random()*0.02,color,r:2+Math.random()*3});
+  }
+}
+
+function onCorrect(lbl){
+  answered=true; lbl.hit=true;
+  stopCursor();
+  labelData.forEach(l=>l.el.classList.remove('active'));
+  lbl.el.classList.add('hit-correct');
+  // 緑フラッシュパーティクル
+  for(let i=0;i<30;i++){
+    const a=Math.random()*Math.PI*2, spd=2+Math.random()*5;
+    particles_arr.push({x:dischargeX,y:heartY,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
+      life:1,decay:0.02+Math.random()*0.02,color:Math.random()<0.5?'#00ff88':'#88ffcc',r:2+Math.random()*4});
+  }
+  combo++;
+  showCombo();
+  const prevStage = getStage();
+  questionCount++;
+  stageQCount++;
+  const newStage = getStage();
+  const stageCleared = (newStage !== prevStage);
+
+  // HUD進行バーを即時更新（ステージクリア時は100%表示）
+  levelEl.textContent = prevStage;
+  updateHUD(prevStage);
+  if(stageCleared) stageQCount = 0;
+
+  // 電離線: 正解で後退（鬼面は短縮量が半分）
+  const _totalRange = (heartX - heartBaseSize) - dischargeMinX;
+  const _correctRate = getStageDef().st >= 19 ? 0.125 : 0.25;
+  targetDischargeX = Math.max(dischargeMinX, dischargeX - _totalRange * _correctRate);
+
+  // 600ms待機してアニメを見せてから次へ
+  setTimeout(()=>{
+    if(currentWave) currentWave.alive=false;
+
+    // ─ メダル獲得判定（各ステージクリア後）─
+    if(prevStage===3 && stageCleared){
+      earnMedalAndCelebrate(1, 2, 'omote', ()=>{
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
+        showStageAnnounce(4, ()=>spawnWave(pickQuestion(), true));
+      }); return;
+    }
+    if(prevStage===6 && stageCleared){
+      earnMedalAndCelebrate(2, 3, 'omote', ()=>{
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
+        showStageAnnounce(7, ()=>spawnWave(pickQuestion(), true));
+      }); return;
+    }
+    if(prevStage===9 && stageCleared){
+      earnMedalAndCelebrate(3, 4, 'omote', ()=>{
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
+        showStageAnnounce(10, ()=>spawnWave(pickQuestion(), true));
+      }); return;
+    }
+    if(prevStage===12 && stageCleared){
+      earnMedalAndCelebrate(4, 5, 'ura', ()=>{
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
+        showStageAnnounce(13, ()=>spawnWave(pickQuestion(), true));
+      }); return;
+    }
+    if(prevStage===15 && stageCleared){
+      earnMedalAndCelebrate(5, 6, 'ura', ()=>{
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
+        showStageAnnounce(16, ()=>spawnWave(pickQuestion(), true));
+      }); return;
+    }
+    if(prevStage===18 && stageCleared){
+      earnMedalAndCelebrate(6, 7, 'ura', ()=>{
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
+        showStageAnnounce(19, ()=>spawnWave(pickQuestion(), true));
+      }); return;
+    }
+    // 鬼面クリア判定（3段階）
+    if(prevStage===21 && stageCleared){
+      earnMedalAndCelebrate(7, 8, 'oni', ()=>{
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
+        showStageAnnounce(22, ()=>spawnWave(pickQuestion(), true));
+      }); return;
+    }
+    if(prevStage===24 && stageCleared){
+      earnMedalAndCelebrate(8, 9, 'oni', ()=>{
+        stageQCount=0; slimes=[]; _savedSlimes=[]; spotlight=null; particles_arr=[];
+        showStageAnnounce(25, ()=>spawnWave(pickQuestion(), true));
+      }); return;
+    }
+    // ST27: 最終ステージ（questionCountが全q合計を超えるとstageCleared=falseになるため独自判定）
+    const st27Def = STAGE_DEFS.find(d => d.st === 27);
+    if(prevStage===27 && stageQCount >= (st27Def ? st27Def.q : 1)){
+      stageQCount = 0;
+      earnMedalAndCelebrate(9, 10, 'oni', ()=>{ returnToTop(); });
+      return;
+    }
+    if(stageCleared){
+      slimes=[];
+      showStageAnnounce(newStage, ()=>spawnWave(pickQuestion(), true));
+    } else {
+      spawnWave(pickQuestion(), false);
+    }
+  }, 2000);
+}
+
+// 電離線アニメが収束するまで待ってからコールバック
+
+// ─── メダル獲得＋お祝い共通処理 ───────────────────────────────────────
+function earnMedalAndCelebrate(medalNum, btnNum, type, nextCb){
+  localStorage.setItem(`medal${medalNum}`,'1');
+  // 放電線を初期値にリセット
+  dischargeX = dischargeMinX;
+  targetDischargeX = dischargeMinX;
+  updateHUD(getStage());
+  if(currentWave) currentWave.alive=false;
+  startCelebration(type, nextCb, medalNum, btnNum);
+}
+
+function waitDischargeSettled(cb){
+  const check = ()=>{
+    const diff = Math.abs(dischargeX - targetDischargeX);
+    if(diff < 2){
+      cb();
+    } else {
+      setTimeout(check, 50);
+    }
+  };
+  setTimeout(check, 100);
+}
+
+// お祝いアニメーション
+// medalNum: 1-7 表示するメダル番号
+// btnNum:   1-7 表示するスタートボタン番号
+// type: 'omote'|'ura'|'oni' テキスト用
+// cb: 終了後コールバック
+function startCelebration(type, cb, medalNum, btnNum){
+  type = type || 'oni';
+  gameState = 'celebration';
+
+  // gameLoopを停止
+  if(frameId){ cancelAnimationFrame(frameId); frameId = null; }
+  if(celebFrameId){ cancelAnimationFrame(celebFrameId); celebFrameId = null; }
+
+  // 古いceleb要素をクリア
+  const oldCv = document.getElementById('celeb-canvas');
+  if(oldCv) oldCv.remove();
+  const oldBtn = document.getElementById('celeb-next-btn');
+  if(oldBtn) oldBtn.remove();
+
+  // ── 専用canvasをgame-container全面に重ねる ──────────────────────────
+  const gc = document.getElementById('game-container');
+  const gcW = gc.offsetWidth;
+  const gcH = gc.offsetHeight;
+  const dpr = window.devicePixelRatio || 1;
+
+  const cv = document.createElement('canvas');
+  cv.id = 'celeb-canvas';
+  cv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:30;';
+  cv.width  = Math.round(gcW * dpr);
+  cv.height = Math.round(gcH * dpr);
+  gc.appendChild(cv);
+  const cc = cv.getContext('2d');
+  cc.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cW = gcW, cH = gcH;
+
+  // 画像
+  const mainImg = new Image();
+  const _mnum = medalNum || (type==='omote' ? 3 : type==='ura' ? 6 : 7);
+  mainImg.src = `medal${_mnum}.webp`;
+  const _bnum = btnNum || (type==='omote' ? 4 : type==='ura' ? 6 : 7);
+  const btnSrc = `start${_bnum}.webp`;
+
+  // 星キャッシュ（独自スクロール値を使用）
+  let celebStarScroll = ecgStarScroll;
+
+  // 紙吹雪 or 花火（medal9のみ花火）
+  const colors = ['#ff4400','#ffaa00','#ffff00','#00ff88','#00ccff','#ff88ff','#ffffff'];
+  const isFinalMedal = (_mnum === 9);
+  const confetti = [];
+  if(!isFinalMedal){
+    for(let i=0;i<180;i++){
+      confetti.push({
+        x:Math.random()*cW, y:-20-Math.random()*cH*0.5,
+        vx:(Math.random()-0.5)*4, vy:1.5+Math.random()*3.5,
+        r:4+Math.random()*6, color:colors[Math.floor(Math.random()*colors.length)],
+        rot:Math.random()*Math.PI*2, rotV:(Math.random()-0.5)*0.15
+      });
+    }
+  }
+
+  // 花火システム（medal9専用）
+  const fireworks = [];    // 爆発パーティクル
+  const rockets = [];      // 打ち上げロケット
+  let nextRocketTs = 200;
+  const FW_DURATION = 5000; // 5秒間
+
+  function launchRocket(){
+    const startX = cW * (0.1 + Math.random()*0.8);
+    const targetY = cH * (0.08 + Math.random()*0.35); // 爆発Y座標
+    const hue = Math.floor(Math.random()*360);
+    const spd = 10 + Math.random()*6;
+    rockets.push({
+      x:startX, y:cH, vx:0, vy:-spd, // まっすぐ上へ
+      targetY, hue, trail:[], exploded:false
+    });
+  }
+
+  // 艶やかな花火カラーパレット
+  const FW_PALETTES = [
+    {main:[0,100,55],   sub:[60,100,65]},   // 深紅 × 黄金
+    {main:[120,100,45], sub:[60,100,70]},   // 濃緑 × 黄金
+    {main:[240,100,60], sub:[200,100,75]},  // 深青 × シアン
+    {main:[280,100,55], sub:[320,100,70]},  // 紫   × マゼンタ
+    {main:[30,100,55],  sub:[55,100,65]},   // 深橙 × 黄
+    {main:[170,100,45], sub:[130,100,65]},  // 深緑青 × 黄緑
+    {main:[350,100,55], sub:[20,100,65]},   // 深赤 × オレンジ
+    {main:[200,100,50], sub:[240,100,65]},  // 深青 × 紺青
+  ];
+
+  function explodeFirework(rx, ry, hue){
+    const palette = FW_PALETTES[Math.floor(Math.random()*FW_PALETTES.length)];
+    const [mH,mS,mL] = palette.main;
+    const [sH,sS,sL] = palette.sub;
+    const count = 100 + Math.floor(Math.random()*50);
+    const particles = [];
+    // メインリング（2色交互）
+    for(let i=0;i<count;i++){
+      const ang = (Math.PI*2/count)*i;
+      const spd = 3.5 + Math.random()*4.5;
+      const isMain = i % 2 === 0;
+      const [h,s,l] = isMain ? [mH+(Math.random()-0.5)*15, mS, mL+Math.random()*15]
+                              : [sH+(Math.random()-0.5)*15, sS, sL+Math.random()*15];
+      particles.push({
+        x:rx, y:ry,
+        vx:Math.cos(ang)*spd*(0.7+Math.random()*0.6),
+        vy:Math.sin(ang)*spd*(0.7+Math.random()*0.6),
+        life:1, decay:0.007+Math.random()*0.007,
+        hue:h, sat:s, lit:l,
+        r:2+Math.random()*2.5, type:'main'
+      });
+    }
+    // スパーク（白→パレット色に変化）
+    for(let i=0;i<35;i++){
+      const ang = Math.random()*Math.PI*2;
+      const spd = 1.5 + Math.random()*3;
+      particles.push({
+        x:rx, y:ry,
+        vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd,
+        life:1, decay:0.018+Math.random()*0.015,
+        hue:mH, sat:80, lit:92, r:1.2+Math.random()*1.8, type:'glitter'
+      });
+    }
+    fireworks.push({particles, done:false});
+    fireworks.push({flash:{x:rx,y:ry,hue:mH,r:70,life:1}, done:false});
+  }
+
+  let running = true;
+  let btnShown = false;
+  const startTs = performance.now();
+
+  function cleanup(){
+    running = false;
+    if(celebFrameId){ cancelAnimationFrame(celebFrameId); celebFrameId = null; }
+    const c2 = document.getElementById('celeb-canvas'); if(c2) c2.remove();
+    const b2 = document.getElementById('celeb-next-btn'); if(b2) b2.remove();
+  }
+
+  function showBtn(){
+    if(btnShown) return;
+    btnShown = true;
+    const btn = document.createElement('img');
+    btn.id = 'celeb-next-btn';
+    btn.src = btnSrc;
+    const btnBottom = Math.max(20, Math.min(120, cH * 0.12));
+    btn.style.cssText = `position:absolute;bottom:${btnBottom}px;left:50%;transform:translateX(-50%);width:min(260px,75%);cursor:pointer;z-index:31;filter:drop-shadow(0 0 12px rgba(0,255,136,0.4));transition:transform .12s,filter .12s;`;
+    btn.addEventListener('mouseover', ()=>{ btn.style.transform='translateX(-50%) scale(1.04)'; btn.style.filter='drop-shadow(0 0 20px rgba(0,255,136,0.55))'; });
+    btn.addEventListener('mouseout',  ()=>{ btn.style.transform='translateX(-50%)';             btn.style.filter='drop-shadow(0 0 12px rgba(0,255,136,0.4))'; });
+    btn.addEventListener('mousedown', ()=>{ btn.style.transform='translateX(-50%) scale(0.97)'; });
+    btn.addEventListener('mouseup',   ()=>{ btn.style.transform='translateX(-50%) scale(1.04)'; });
+    btn.onclick = () => {
+      cleanup();
+      if(cb){
+        dischargeX = dischargeMinX;
+        targetDischargeX = dischargeMinX;
+        gameState = 'paused';
+        // ボタンを押した瞬間にHUD・ヒント・control-panelを即座に非表示
+        const uiEl = document.getElementById('ui');
+        const cpEl = document.getElementById('control-panel');
+        const hintEl = document.getElementById('hint-area');
+        if(uiEl) uiEl.style.display = 'none';
+        if(cpEl) cpEl.style.display = 'none';
+        if(hintEl) hintEl.classList.add('hidden');
+        // canvasを黒塗り
+        ctx.clearRect(0,0,W,H);
+        ctx.fillStyle='#000008';
+        ctx.fillRect(0,0,W,H);
+        cb();
+      } else {
+        returnToTop();
+      }
+    };
+    gc.appendChild(btn);
+  }
+
+  // メダル番号に応じた詳細テキスト
+  const clearTextMap = {
+    1:'表面10クリア！', 2:'表面30クリア！', 3:'表面100クリア！',
+    4:'裏面10クリア！', 5:'裏面30クリア！', 6:'裏面100クリア！',
+    7:'鬼面10クリア！', 8:'鬼面30クリア！', 9:'鬼面100クリア！'
+  };
+  const faceLabel = type==='omote' ? '表面' : type==='ura' ? '裏面' : '鬼面';
+  const clearText = _mnum ? (clearTextMap[_mnum] || faceLabel+'クリア！') : faceLabel+'クリア！';
+
+  // 星を描画（独立canvas用・drawBgを使わず直接描画）
+  function drawCelebBg(){
+    cc.fillStyle = '#000008';
+    cc.fillRect(0, 0, cW, cH);
+  }
+
+  let celebLastTs = null;
+  function loop(ts){
+    if(!running) return;
+    const dt2 = celebLastTs !== null ? Math.min(ts - celebLastTs, 32) : 16;
+    celebLastTs = ts;
+    const elapsed = ts - startTs;
+
+    cc.clearRect(0, 0, cW, cH);
+    drawCelebBg();
+
+    if(isFinalMedal){
+      // ── 花火（5秒間） ──
+      if(elapsed < FW_DURATION && elapsed > nextRocketTs){
+        launchRocket();
+        nextRocketTs = elapsed + 350 + Math.random()*500;
+      }
+
+      // ロケット更新・描画
+      for(let i=rockets.length-1;i>=0;i--){
+        const rk = rockets[i];
+        if(rk.exploded){ rockets.splice(i,1); continue; }
+        rk.x += rk.vx; rk.y += rk.vy;
+        // 目標Y座標に達したら爆発
+        if(rk.y <= rk.targetY){
+          explodeFirework(rk.x, rk.targetY, rk.hue);
+          rockets.splice(i,1); continue;
+        }
+        // 軌跡
+        rk.trail.push({x:rk.x, y:rk.y});
+        if(rk.trail.length > 10) rk.trail.shift();
+        // 軌跡描画
+        for(let j=0;j<rk.trail.length;j++){
+          const a = j/rk.trail.length * 0.7;
+          cc.beginPath();
+          cc.arc(rk.trail[j].x, rk.trail[j].y, 1.5, 0, Math.PI*2);
+          cc.fillStyle = `hsla(${rk.hue},100%,88%,${a*0.9})`;
+          cc.fill();
+        }
+        // ロケット本体
+        cc.beginPath();
+        cc.arc(rk.x, rk.y, 3, 0, Math.PI*2);
+        cc.fillStyle = `hsla(${rk.hue},100%,90%,0.95)`;
+        cc.fill();
+      }
+
+      // 爆発パーティクル描画
+      for(const fw of fireworks){
+        if(fw.flash){
+          // フラッシュ
+          fw.flash.life -= 0.15;
+          if(fw.flash.life <= 0){ fw.done=true; continue; }
+          const fg = cc.createRadialGradient(fw.flash.x,fw.flash.y,0,fw.flash.x,fw.flash.y,fw.flash.r*(1-fw.flash.life+0.5));
+          fg.addColorStop(0, `hsla(${fw.flash.hue},100%,100%,${fw.flash.life})`);
+          fg.addColorStop(0.5, `hsla(${fw.flash.hue},100%,85%,${fw.flash.life*0.6})`);
+          fg.addColorStop(1, 'transparent');
+          cc.beginPath(); cc.arc(fw.flash.x,fw.flash.y,fw.flash.r,0,Math.PI*2);
+          cc.fillStyle=fg; cc.fill();
+          continue;
+        }
+        let allDead = true;
+        for(const p of fw.particles){
+          p.x += p.vx; p.y += p.vy;
+          p.vy += 0.05; // 重力
+          p.vx *= 0.98; p.vy *= 0.98;
+          p.life -= p.decay;
+          if(p.life <= 0) continue;
+          allDead = false;
+          cc.save();
+          const alpha = p.type==='glitter' ? Math.abs(Math.sin(p.life*20))*p.life : p.life*p.life;
+          cc.globalAlpha = alpha;
+          if(p.type==='glitter'){
+            // キラキラ
+            cc.fillStyle=`hsl(${p.hue},${p.sat}%,${p.lit}%)`;
+            cc.beginPath(); cc.arc(p.x,p.y,p.r,0,Math.PI*2); cc.fill();
+          } else {
+            // メインパーティクル（グラデーション）
+            const g = cc.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*2.5);
+            g.addColorStop(0, `hsla(${p.hue},${p.sat}%,${Math.min(100,p.lit+35)}%,1)`);
+            g.addColorStop(0.5, `hsla(${p.hue},${p.sat}%,${p.lit}%,0.8)`);
+            g.addColorStop(1, `hsla(${p.hue},${p.sat}%,${p.lit}%,0)`);
+            cc.beginPath(); cc.arc(p.x,p.y,p.r*2.5,0,Math.PI*2);
+            cc.fillStyle=g; cc.fill();
+          }
+          cc.restore();
+        }
+        if(allDead) fw.done = true;
+      }
+      for(let i=fireworks.length-1;i>=0;i--){ if(fireworks[i].done) fireworks.splice(i,1); }
+    } else {
+      // ── 紙吹雪 ──
+      const ca = Math.max(0, 1 - elapsed/5000);
+      for(const c of confetti){
+        c.x+=c.vx; c.y+=c.vy; c.rot+=c.rotV;
+        if(c.y>cH+20){ c.y=-10; c.x=Math.random()*cW; }
+        cc.save(); cc.translate(c.x,c.y); cc.rotate(c.rot);
+        cc.fillStyle=c.color; cc.globalAlpha=ca;
+        cc.fillRect(-c.r/2,-c.r/2,c.r,c.r);
+        cc.restore();
+      }
+    }
+
+    const fade = Math.min(1, elapsed/500);
+    cc.save(); cc.globalAlpha=fade;
+    cc.textAlign='center'; cc.textBaseline='middle';
+    const fs = Math.floor(cW*0.055);
+    cc.font=`bold ${fs}px "Helvetica Neue","Hiragino Sans","Yu Gothic",sans-serif`;
+
+    cc.shadowColor='rgba(255,255,255,0.6)'; cc.shadowBlur=10; cc.fillStyle='rgba(255,255,255,0.92)';
+    cc.fillText(clearText, cW/2, cH*0.10);
+
+    const medalY = cH*0.18;
+    if(mainImg.complete && mainImg.naturalWidth>0){
+      const cw2=Math.min(cW*0.55,220), ch2=cw2*(mainImg.naturalHeight/mainImg.naturalWidth);
+      cc.drawImage(mainImg,(cW-cw2)/2, medalY, cw2, ch2);
+    }
+
+    const medalBottom = medalY + Math.min(cW*0.55,220) * 1.05;
+    cc.shadowColor='#ffdd00'; cc.shadowBlur=16; cc.fillStyle='#ffee88';
+    if(_mnum === 9){
+      cc.fillText('ECGチャレンジ完全制覇', cW/2, medalBottom + fs*1.1);
+      cc.shadowBlur=0;
+    } else {
+      cc.fillText('メダル獲得！', cW/2, medalBottom + fs*1.1);
+    }
+
+    cc.restore();
+    if(elapsed > 2000) showBtn();
+    celebFrameId = requestAnimationFrame(loop);
+  }
+  celebFrameId = requestAnimationFrame(loop);
+}
+
+
+function showStageAnnounce(stage, cb){
+  const d = STAGE_DEFS.find(x=>x.st===stage) || {sub:'',color:'#00ff88',label:''};
+
+  // ステージ名を日本語で生成
+  let stageName;
+  stageName = `ステージ${stage}`;
+
+  const prevState = gameState;
+  gameState = 'paused';
+  spotlight = null;
+  // gameLoopを止めてcanvasを黒でクリア
+  if(frameId){ cancelAnimationFrame(frameId); frameId = null; }
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#000008';
+  ctx.fillRect(0,0,W,H);
+  // HUD・ヒント・control-panelを非表示（アナウンス中は不要）
+  const _annUiEl = document.getElementById('ui');
+  const _annCpEl = document.getElementById('control-panel');
+  const _annHint = document.getElementById('hint-area');
+  if(_annUiEl) _annUiEl.style.display = 'none';
+  if(_annCpEl) _annCpEl.style.display = 'none';
+  if(_annHint) _annHint.classList.add('hidden');
+  const ann=document.createElement('div');
+  ann.style.cssText=`position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;
+    background:rgba(0,0,8,0.97);z-index:15;pointer-events:none;`;
+  ann.innerHTML=`
+    <div style="
+      font-size:42px;font-weight:900;
+      font-family:'Helvetica Neue','Hiragino Sans',sans-serif;
+      color:transparent;
+      -webkit-text-stroke:2px ${d.color};
+      text-stroke:2px ${d.color};
+      filter:drop-shadow(0 0 18px ${d.color}) drop-shadow(0 0 40px ${d.color});
+      letter-spacing:2px;white-space:nowrap;
+      animation:stAnnScale 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
+    ">${stageName}</div>
+    <div style="
+      font-size:16px;color:rgba(255,255,255,0.75);
+      font-family:'Helvetica Neue','Hiragino Sans',sans-serif;
+      letter-spacing:1px;margin-top:2px;
+      animation:stAnnFadeIn 0.5s 0.15s ease-out both;
+    ">${d.sub}</div>
+    <div style="
+      width:160px;height:1px;
+      background:linear-gradient(90deg,transparent,${d.color},transparent);
+      animation:stAnnFadeIn 0.6s 0.4s ease-out both;
+      box-shadow:0 0 8px ${d.color};
+    "></div>`;
+  // CSS animations inline injection
+  if(!document.getElementById('stAnnStyle')){
+    const s=document.createElement('style');
+    s.id='stAnnStyle';
+    s.textContent=`
+      @keyframes stAnnFadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+      @keyframes stAnnScale{from{opacity:0;transform:scale(0.4);}60%{transform:scale(1.08);}to{opacity:1;transform:scale(1);}}
+    `;
+    document.head.appendChild(s);
+  }
+  document.getElementById('game-container').appendChild(ann);
+  setTimeout(()=>{
+    ann.remove();
+    _stageAnnEl = null;
+    gameState = 'playing';
+    // UI/HUDを再表示してからゲーム開始
+    if(_annUiEl) _annUiEl.style.display = '';
+    if(_annCpEl) _annCpEl.style.display = '';
+    cb();
+    if(!frameId){ lastTime=performance.now(); frameId=requestAnimationFrame(gameLoop); }
+  }, 2600);
+}
+
+function onWrong(lbl){
+  answered=true; lbl.hit=true;
+  stopCursor();
+  labelData.forEach(l=>l.el.classList.remove('active'));
+  lbl.el.classList.add('hit-wrong');
+  // 正解ラベルをハイライト表示
+  labelData.forEach(l=>{ if(l.correct) l.el.classList.add('hit-correct'); });
+  // 不正解：放電が心臓に近づく（固定ピクセル）
+  const heartLeft = heartX - heartBaseSize * 0.5;
+  const heartLeft2 = heartX - heartBaseSize;
+  // 電離線: 不正解で前進（鬼面は1.5倍）
+  const _totalRange2 = heartLeft2 - dischargeMinX;
+  const _wrongRate = getStageDef().st >= 19 ? 0.225 : 0.15;
+  const WRONG_ADVANCE = _totalRange2 * _wrongRate;
+  targetDischargeX = Math.min(heartLeft2 - 2, dischargeX + WRONG_ADVANCE);
+  // 赤フラッシュパーティクル（即時）
+  for(let i=0;i<30;i++){
+    const a=Math.random()*Math.PI*2, spd=2+Math.random()*5;
+    particles_arr.push({x:dischargeX,y:heartY,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,
+      life:1,decay:0.02+Math.random()*0.02,color:Math.random()<0.5?'#ff3333':'#ff8844',r:2+Math.random()*4});
+  }
+  resetCombo();
+  // 600ms待機して電離線が伸びるアニメを見せてから次へ
+  const goOver = (targetDischargeX >= heartLeft - 5);
+  setTimeout(()=>{
+    // スライム位置を保存（次の心電図で同位置から再開）
+    if(slimes.length > 0) _savedSlimes = slimes.map(s=>({...s}));
+    if(currentWave) currentWave.alive=false;
+    if(goOver){
+      setTimeout(()=>gameOver(), 300);
+    } else {
+      spawnWave(pickQuestion(), false);
+    }
+  }, 4000);
+}
+
+document.addEventListener('keydown', e=>{
+  if((e.code==='Space'||e.code==='Enter') && gameState!=='playing'){
+    e.preventDefault();
+    const btn=document.getElementById('start-btn');
+    if(btn) btn.click();
+  }
+});
+
+function showCombo(){ /* combo display removed */ }
+function resetCombo(){ combo=0; }
+
+function gameLoop(ts){
+  const dt=Math.min(ts-lastTime,32); lastTime=ts;
+
+  // playing/gameover以外はgameLoopを止める
+  if(gameState==='celebration' ||
+     gameState==='paused' ||
+     (gameState==='idle' && !goState)){
+    frameId=null;
+    return;
+  }
+
+  ctx.clearRect(0,0,W,H);
+  // 星スクロール：常に更新
+  // ecgStarScroll -= dt * 0.025;  // 星削除済み
+
+  // 心臓の実際の左端（heartX - heartBaseSize が正確な左端）
+  const heartLeft = heartX - heartBaseSize;
+  if(gameState==='playing' && currentWave && currentWave.alive && currentWave.ready){
+    if(!answered){
+      // 未回答: 放電が右へ自然前進（鬼面は2倍速）
+      const isOni = getStageDef().st >= 19;
+      const advance = currentWave.speed * (isOni ? 2 : 1);
+      dischargeX += advance;
+      targetDischargeX += advance;
+    } else {
+      // 回答済み: targetDischargeXに向けてイージング（伸び縮みアニメ）
+      const diff = targetDischargeX - dischargeX;
+      dischargeX += diff * 0.08;
+    }
+    // dischargeX（実描画位置）が心臓左端に届いた瞬間にゲームオーバー
+    if(dischargeX >= heartLeft && !window._goScheduled){
+      window._goScheduled = true;
+      answered = true; // 即座に入力ロック
+      gameOver();
+    }
+  } else if(gameState==='playing' || gameState==='paused'){
+    // 通常イージング
+    const diff = targetDischargeX - dischargeX;
+    dischargeX += diff * 0.08;
+    // マーク進行
+    if(resultMark && !resultMark.done){
+      resultMark.progress = Math.min(1, resultMark.progress + 0.045);
+    }
+  } else if(gameState==='gameover' && goState){
+    updateGoState(dt);
+  }
+
+// QRS発火チェック（10秒ループで繰り返す）
+if(gameState==='playing' && currentWave && currentWave.ready && qrsSchedule.length > 0){
+  const elapsed = performance.now() - waveStartTime;
+  const cycleDuration = 10000; // 10秒サイクル
+  const cycleElapsed = elapsed % cycleDuration;
+  const cycleIndex = Math.floor(elapsed / cycleDuration);
+  for(const qrs of qrsSchedule){
+    // 今のサイクルでまだ発火していないものをチェック
+    if(qrs.lastCycle === undefined) qrs.lastCycle = -1;
+    if(qrs.lastCycle < cycleIndex && cycleElapsed >= qrs.timeMs){
+      qrs.lastCycle = cycleIndex;
+      heartBeat.phase = 'beat';
+      heartBeat.t = 0;
+    }
+  }
+}
+// 心臓アニメ更新
+updateHeartBeat(dt);
+
+drawBg();
+// updateAndDrawEcgShootingStars(dt); // 削除済み
+drawDangerLine();  // 放電管・電離線は常に表示
+drawHeart();       // 心臓は常に表示
+if(gameState !== 'gameover'){
+  drawWave();
+  drawResultMark();
+  drawHint();
+  drawParticles();
+  updateSlimes();
+  drawSlimes();
+  updateSpotlight();
+  drawSpotlight();
+}
+drawGoStateEffects();
+
+  // 虫眼鏡を最後に重ね描き（gameLoopの上書きに対応）
+  if(typeof _magDrawLens === 'function') _magDrawLens();
+
+  frameId=requestAnimationFrame(gameLoop);
+}
+
+// ─── 心臓拍動 ─────────────────────────────────────────────────────────────
+function updateHeartBeat(dt){
+  if(heartBeat.phase === 'beat'){
+    heartBeat.t += dt;
+    const dur = 350; // 拍動アニメ全体 ms
+    const p = Math.min(1, heartBeat.t / dur);
+    // 0→0.2: 急速に縮む (1.0→0.7)
+    // 0.2→1.0: ゆっくり戻る (0.7→1.0)
+    if(p < 0.2){
+      heartBeat.scale = 1.0 - (p / 0.2) * 0.3;
+    } else {
+      heartBeat.scale = 0.7 + ((p - 0.2) / 0.8) * 0.3;
+    }
+    if(p >= 1){
+      heartBeat.phase = 'idle';
+      heartBeat.scale = 1.0;
+    }
+  } else {
+    // idle時は静止（微細ゆらぎのみ）
+    heartBeat.scale = 1.0 + Math.sin(performance.now() * 0.0015) * 0.012;
+  }
+}
+
+function drawHeart(){
+  if(heartY < 0) return;  // onload前はスキップ
+
+  // ゲームオーバーシーケンス中の心臓描画
+  if(goState){
+    const gs = goState;
+    if(gs.phase === 'vf' || gs.phase === 'fadeOut' || gs.phase === 'show'){
+      // VF痙攣: 500bpmのスケール変化＋ランダムなふるえ
+      const amp = 4;
+      const ox = (Math.random()-0.5)*amp;
+      const oy = (Math.random()-0.5)*amp;
+      const flicker = 0.4 + Math.random()*0.6;
+      const s = heartBeat.scale; // 500bpmの拍動スケール
+      ctx.save();
+      ctx.globalAlpha = flicker;
+      ctx.translate(heartX+ox, heartY+oy);
+      if(heartImg.complete && heartImg.naturalWidth > 0){
+        const hw = heartImg.naturalWidth*0.5*s;
+        const hh = heartImg.naturalHeight*0.5*s;
+        ctx.drawImage(heartImg, -hw/2, -hh/2, hw, hh);
+      }
+      ctx.restore();
+      return;
+    }
+    if(gs.phase === 'done') return;
+  }
+
+  const s = heartBeat.scale;
+
+  ctx.save();
+  ctx.translate(heartX, heartY);
+
+  if(heartImg.complete && heartImg.naturalWidth > 0){
+    const hw = heartImg.naturalWidth * 0.5 * s;
+    const hh = heartImg.naturalHeight * 0.5 * s;
+    ctx.drawImage(heartImg, -hw/2, -hh/2, hw, hh);
+  } else {
+    // fallback: 赤い円
+    ctx.beginPath();
+    ctx.arc(0, 0, heartBaseSize * 0.5 * s, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(200,30,30,0.8)';
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
+
+function drawGoStateEffects(){
+  if(!goState) return;
+  if(gameState !== 'gameover' && !goState.done) return;
+  const t = goState.t;
+  if(t < 2000) return;
+
+  const alpha = Math.min(1, (t - 2000) / 400);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  if(gameoverImg.complete && gameoverImg.naturalWidth > 0){
+    // gameover.webpを電離線のすぐ上に中央表示
+    const imgW = Math.min(W * 0.7, gameoverImg.naturalWidth);
+    const imgH = imgW * (gameoverImg.naturalHeight / gameoverImg.naturalWidth);
+    const ix = (W - imgW) / 2;
+    const iy = heartY - imgH - 60;  // 少し上に
+    ctx.drawImage(gameoverImg, ix, iy, imgW, imgH);
+  } else {
+    // フォールバック：テキスト
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 36px "Courier New",monospace';
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 28;
+    ctx.fillStyle = 'rgba(255,40,40,1)';
+    ctx.fillText('GAME OVER', W/2, heartY - 50);
+  }
+  // 「最終到達面」表示（放電線の下）
+  if(t > 2000){
+    const stDef = STAGE_DEFS.find(d => d.st === (typeof _lastStageAtGameOver !== 'undefined' ? _lastStageAtGameOver : 1));
+    if(stDef){
+      const faceLabel = stDef.st >= 19 ? '鬼面' : stDef.st > 9 ? '裏面' : '表面';
+      const dispNum   = stDef.st > 9 && stDef.st < 19 ? stDef.st - 9 : stDef.st;
+      const stageNum  = `　ステージ${dispNum}`;
+      const lineBreak = '\n';
+      const reachText1 = '最終到達';
+      const reachText2 = `${faceLabel}${stageNum}`;
+      const reachAlpha = Math.min(1, (t - 2000) / 600);
+      ctx.save();
+      ctx.globalAlpha = reachAlpha;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `bold ${Math.floor(W*0.062)}px "Helvetica Neue","Hiragino Sans",sans-serif`;
+      ctx.fillStyle = 'rgba(255,200,100,0.9)';
+      ctx.shadowColor = 'rgba(255,160,0,0.5)';
+      ctx.shadowBlur = 8;
+      const lineH = Math.floor(W*0.062) * 1.5;
+      ctx.fillText(reachText1, W/2, heartY + 90);
+      ctx.fillText(reachText2, W/2, heartY + 90 + lineH);
+      ctx.restore();
+    }
+  }
+
+  ctx.restore();
+}
+function drawBg(){
+  ctx.fillStyle = '#000008';
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawDangerLine(){
+  if(heartY < 0) return;  // onload前はスキップ
+  const now = performance.now();
+  const t = now * 0.02;
+  const cy = heartY; // 心臓と同じ高さ
+
+  // ── 左端の discharge.webp：半分サイズ＋左右首振り回転 ──
+  // 左右にゆっくり首振り（±12度、周期約3秒）
+  const swayAngle = Math.sin(now * 0.0021) * (Math.PI / 15);
+  let dischargeOriginX = 8;
+  if(waveImg.complete && waveImg.naturalWidth > 0){
+    const dw = waveImg.naturalWidth  * 0.35;
+    const dh = waveImg.naturalHeight * 0.35;
+    // 画像の左端中央を回転の基点にする（画像左側を軸に首振り）
+    const pivotX = dw * 0.2; // 左寄りを軸
+    ctx.save();
+    ctx.translate(pivotX, cy);
+    ctx.rotate(swayAngle);
+    ctx.drawImage(waveImg, -pivotX, -dh/2, dw, dh);
+    ctx.restore();
+    dischargeOriginX = dw * 0.55;
+    dischargeMinX = dischargeOriginX; // 放電管辺縁を最小値として保持
+  }
+  const dischargeOriginY = cy;
+
+  const cx = dischargeX; // 放電先端X
+  if(cx <= dischargeOriginX + 2) return;
+
+  // ── 放電ライン5本・青系カラー ──
+  const lineCount = 5;
+  for(let li = 0; li < lineCount; li++){
+    const yOff = (li - (lineCount-1)/2) * 2.5;
+    const pts = [];
+    let px = dischargeOriginX, py = dischargeOriginY + yOff;
+    pts.push([px, py]);
+    while(px < cx){
+      px += 8 + Math.random() * 10;
+      py = cy + yOff + (Math.random()-0.5)*8 + Math.sin(px*0.04 + t + li)*2;
+      pts.push([px, py]);
+    }
+    const drawPath = () => {
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    };
+
+    ctx.save();
+    // 外側グロー（青）
+    drawPath();
+    ctx.strokeStyle = `rgba(${40+li*8},${120+li*15},255,${0.20-li*0.01})`;
+    ctx.lineWidth = 7 - li * 0.5;
+    ctx.shadowColor = 'rgba(60,140,255,0.5)';
+    ctx.shadowBlur = 14;
+    ctx.stroke();
+    // 中間放電（水色）
+    drawPath();
+    ctx.strokeStyle = `rgba(${80+li*8},${180+li*10},255,${0.55-li*0.04})`;
+    ctx.lineWidth = 2.5 - li * 0.2;
+    ctx.shadowBlur = 0;
+    ctx.stroke();
+    // 白芯（中央1本）
+    if(li === 2){
+      drawPath();
+      ctx.strokeStyle = 'rgba(200,230,255,0.92)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    // 小スパーク（青白）
+    for(let i=2; i<pts.length-2; i+=3){
+      if(Math.random() < 0.35){
+        ctx.beginPath();
+        ctx.moveTo(pts[i][0], pts[i][1]);
+        ctx.lineTo(pts[i][0]+(Math.random()-0.5)*10, pts[i][1]-5-Math.random()*10);
+        ctx.strokeStyle='rgba(150,210,255,0.45)';
+        ctx.lineWidth=1;
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+}
+
+function drawWave(){
+
+  if(!currentWave || !currentWave.alive || !currentWave.ready) return;
+  // fadeEcg フェーズで半透明
+  if(goState && goState.phase === 'fadeEcg'){
+    ctx.globalAlpha = Math.max(0, goState.ecgAlpha);
+  }
+
+  const w = currentWave;
+
+  if(!w.img.complete || w.img.naturalWidth===0) return;
+
+  // ===== 心電図本体 =====
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  if(w.rot){
+    ctx.translate(w.waveX + w.waveW/2, w.y + w.h/2);
+    ctx.rotate(w.rot);
+    ctx.drawImage(w.img, -w.waveW/2, -w.h/2, w.waveW, w.h);
+  }else{
+    ctx.drawImage(w.img, w.waveX, w.y, w.waveW, w.h);
+  }
+
+  ctx.restore();
+  ctx.globalAlpha = 1; // フェードアウト後リセット
+}
+
+
+function drawHint(){
+  if(!currentWave || !currentWave.ready || !currentWave.alive) return;
+  if(!stageEffects.invert) return;
+  if(getStageDef().st >= 19) return; // 鬼面は非表示
+  // 裏面では「上下反転」バッジはヒント表示状態に関わらず常に表示
+
+  const bx = W / 2;
+  const by = currentWave.y + currentWave.h + 14;
+
+  const text = '上下反転';
+  ctx.save();
+  ctx.font = 'bold 13px "Helvetica Neue","Hiragino Sans","Yu Gothic",sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const tw = ctx.measureText(text).width;
+  const pw = 10;
+  const bw = tw + pw * 2;
+  const bh = 22;
+  const r  = 5;
+
+  ctx.beginPath();
+  ctx.moveTo(bx - bw/2 + r, by - bh/2);
+  ctx.lineTo(bx + bw/2 - r, by - bh/2);
+  ctx.arcTo(bx + bw/2, by - bh/2, bx + bw/2, by - bh/2 + r, r);
+  ctx.lineTo(bx + bw/2, by + bh/2 - r);
+  ctx.arcTo(bx + bw/2, by + bh/2, bx + bw/2 - r, by + bh/2, r);
+  ctx.lineTo(bx - bw/2 + r, by + bh/2);
+  ctx.arcTo(bx - bw/2, by + bh/2, bx - bw/2, by + bh/2 - r, r);
+  ctx.lineTo(bx - bw/2, by - bh/2 + r);
+  ctx.arcTo(bx - bw/2, by - bh/2, bx - bw/2 + r, by - bh/2, r);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillText(text, bx, by + 0.5);
+  ctx.restore();
+}
+
+function drawParticles(){
+  for(let i=particles_arr.length-1;i>=0;i--){
+    const p=particles_arr[i];
+    p.x+=p.vx;p.y+=p.vy;p.vy+=0.08;p.life-=p.decay;
+    if(p.life<=0){particles_arr.splice(i,1);continue;}
+    ctx.save();ctx.globalAlpha=p.life;ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+}
+
+
+// ─── スライムシステム ────────────────────────────────────────────────────────
+// sizes: s=32, m=48, l=64 (半径ではなく画像の表示幅)
+const SLIME_SIZES = [
+  { key:'s', w:32,  r:16 },
+  { key:'m', w:48,  r:24 },
+  { key:'l', w:64,  r:32 },
+];
+const SLIME_IMGS = {};  // key -> Image
+
+function preloadSlimeImages(){
+  for(const s of SLIME_SIZES){
+    const img = new Image();
+    img.src = `slime_${s.key}.webp`;
+    SLIME_IMGS[s.key] = img;
+  }
+}
+preloadSlimeImages();
+
+function spawnSlimes(){
+  slimes = [];
+  const stageDef = getStageDef();
+  const count = stageDef.slimeCount || 3;
+  const waveY = currentWave ? currentWave.y : 20;
+  const waveH = currentWave ? currentWave.h : 80;
+  for(let i=0;i<count;i++){
+    const sdef = SLIME_SIZES[i % SLIME_SIZES.length];
+    const side = Math.floor(Math.random()*4);
+    let x,y,vx,vy;
+    const spd=0.5+Math.random()*0.8, ang=(Math.random()-0.5)*Math.PI*0.5;
+    if(side===0){x=sdef.r+Math.random()*(W-sdef.r*2);y=waveY-sdef.r;vx=Math.sin(ang)*spd;vy=Math.cos(ang)*spd;}
+    else if(side===1){x=W+sdef.r;y=waveY+sdef.r+Math.random()*(waveH-sdef.r*2);vx=-Math.cos(ang)*spd;vy=Math.sin(ang)*spd;}
+    else if(side===2){x=sdef.r+Math.random()*(W-sdef.r*2);y=waveY+waveH+sdef.r;vx=Math.sin(ang)*spd;vy=-Math.cos(ang)*spd;}
+    else{x=-sdef.r;y=waveY+sdef.r+Math.random()*(waveH-sdef.r*2);vx=Math.cos(ang)*spd;vy=Math.sin(ang)*spd;}
+    slimes.push({key:sdef.key,w:sdef.w,r:sdef.r,x,y,vx,vy,wobble:Math.random()*Math.PI*2,wobbleSpeed:0.08+Math.random()*0.06});
+  }
+}
+
+function updateSlimes(){
+  if(gameState === 'gameover') return;
+  for(let i = 0; i < slimes.length; i++){
+    const s = slimes[i];
+    s.x += s.vx;
+    s.y += s.vy;
+    s.wobble += s.wobbleSpeed;
+
+    // 心電図エリア内でバウンド
+    const wY = currentWave ? currentWave.y   : 0;
+    const wB = currentWave ? currentWave.y + currentWave.h : H;
+    if(s.x - s.r < 0)   { s.x = s.r;     s.vx =  Math.abs(s.vx); }
+    if(s.x + s.r > W)   { s.x = W-s.r;   s.vx = -Math.abs(s.vx); }
+    if(s.y - s.r < wY)  { s.y = wY+s.r;  s.vy =  Math.abs(s.vy); }
+    if(s.y + s.r > wB)  { s.y = wB-s.r;  s.vy = -Math.abs(s.vy); }
+
+    // スライム同士の衝突（簡易円判定）
+    for(let j = i+1; j < slimes.length; j++){
+      const t = slimes[j];
+      const dx = t.x - s.x;
+      const dy = t.y - s.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const minDist = s.r + t.r;
+      if(dist < minDist && dist > 0.01){
+        // 法線方向に速度を反射
+        const nx = dx / dist;
+        const ny = dy / dist;
+        // 相対速度の法線成分を交換（弾性衝突）
+        const dvn = (s.vx - t.vx)*nx + (s.vy - t.vy)*ny;
+        if(dvn > 0){ // 近づいている時だけ処理
+          s.vx -= dvn * nx; s.vy -= dvn * ny;
+          t.vx += dvn * nx; t.vy += dvn * ny;
+          // 重なり解消
+          const overlap = (minDist - dist) / 2;
+          s.x -= nx * overlap; s.y -= ny * overlap;
+          t.x += nx * overlap; t.y += ny * overlap;
+        }
+      }
+    }
+  }
+}
+
+function drawSlimes(){
+  if(!slimes.length) return;
+  for(const s of slimes){
+    const img = SLIME_IMGS[s.key];
+    if(!img || !img.complete || img.naturalWidth === 0) continue;
+    // ぷるぷるスケール
+    const scX = 1 + Math.sin(s.wobble) * 0.08;
+    const scY = 1 - Math.sin(s.wobble) * 0.06;
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.scale(scX, scY);
+    ctx.drawImage(img, -s.w/2, -s.w/2, s.w, s.w);
+    ctx.restore();
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
+function updateSpotlight(){
+  if(!spotlight || !currentWave) return;
+  // スポットライトを目標位置へなめらかに追従
+  spotlight.x += (spotlight.tx - spotlight.x) * 0.04;
+  spotlight.y += (spotlight.ty - spotlight.y) * 0.04;
+  // 一定間隔でランダムな目標位置を設定
+  spotlight.moveTimer++;
+  if(spotlight.moveTimer > 90 + Math.random()*60){
+    spotlight.moveTimer = 0;
+    const margin = spotlight.r * 0.6;
+    spotlight.tx = margin + Math.random()*(W - margin*2);
+    spotlight.ty = currentWave.y + margin
+                 + Math.random()*(currentWave.h - margin*2);
+  }
+}
+
+function drawSpotlight(){
+  if(!stageEffects.spotlight) return;
+  if(!spotlight || !currentWave || !currentWave.ready) return;
+  const {x, y, r} = spotlight;
+  const y0 = currentWave.y;
+  const wh = currentWave.h;
+
+  // オフスクリーンcanvasで暗闇マスクを作成
+  const oc = document.createElement('canvas');
+  oc.width = W; oc.height = H;
+  const oc2 = oc.getContext('2d');
+
+  // 1) 暗闇で全体を塗りつぶす（上下を少し広げてエッジを消す）
+  const pad = 20;
+  oc2.fillStyle = 'rgba(0,0,0,0.93)';
+  oc2.fillRect(0, y0 - pad, W, wh + pad*2);
+  // 上端・下端をグラデーションでフェードアウトさせて境界線を消す
+  const gTop = oc2.createLinearGradient(0, y0 - pad, 0, y0 + 6);
+  gTop.addColorStop(0, 'rgba(0,0,0,0)');
+  gTop.addColorStop(1, 'rgba(0,0,0,0.93)');
+  oc2.globalCompositeOperation = 'source-over';
+  oc2.fillStyle = gTop;
+  oc2.fillRect(0, y0 - pad, W, pad + 6);
+  const gBot = oc2.createLinearGradient(0, y0 + wh - 6, 0, y0 + wh + pad);
+  gBot.addColorStop(0, 'rgba(0,0,0,0.93)');
+  gBot.addColorStop(1, 'rgba(0,0,0,0)');
+  oc2.fillStyle = gBot;
+  oc2.fillRect(0, y0 + wh - 6, W, pad + 6);
+
+  // 2) スポット部分を destination-out で透明に抜く
+  oc2.globalCompositeOperation = 'destination-out';
+  const gSpot = oc2.createRadialGradient(x,y,0, x,y,r);
+  gSpot.addColorStop(0,    'rgba(0,0,0,1)');
+  gSpot.addColorStop(0.6,  'rgba(0,0,0,0.85)');
+  gSpot.addColorStop(0.85, 'rgba(0,0,0,0.3)');
+  gSpot.addColorStop(1,    'rgba(0,0,0,0)');
+  oc2.beginPath();
+  oc2.arc(x, y, r, 0, Math.PI*2);
+  oc2.fillStyle = gSpot;
+  oc2.fill();
+
+  // 3) 本体canvasに重ねる
+  ctx.drawImage(oc, 0, 0);
+
+  // 4) スポット縁のグロー（温かみのある光輪）
+  ctx.save();
+  const gGlow = ctx.createRadialGradient(x,y,r*0.75, x,y,r*1.2);
+  gGlow.addColorStop(0,   'rgba(255,220,120,0)');
+  gGlow.addColorStop(0.5, 'rgba(255,200,80,0.13)');
+  gGlow.addColorStop(1,   'rgba(255,180,50,0)');
+  ctx.beginPath();
+  ctx.arc(x, y, r*1.2, 0, Math.PI*2);
+  ctx.fillStyle = gGlow;
+  ctx.fill();
+  ctx.restore();
+}
+
+
+function initGame(){
+  score=0;level=1;combo=0;stageQCount=0;window._goScheduled=false;
+  questionCount = 0; // ST1から開始（テスト：全ステージq:1）
+  // HUDを現在のステージに合わせて初期化
+  updateHUD(getStage());
+  levelEl.textContent='1';
+  particles_arr=[];currentWave=null;usedIndices=[];answered=false;
+  labelsRow.innerHTML='';labelData=[];
+  slimes=[]; dischargeX=dischargeMinX; targetDischargeX=dischargeMinX; spotlight=null;
+  stageEffects={slime:false,spotlight:false,invert:false};
+  const _ha=document.getElementById('hint-area');
+  if(_ha){ _ha.classList.add('hidden'); }
+  heartBeat={scale:1.0, phase:'idle', t:0};
+  goState=null;
+  heartX=0; heartY=-999;
+  qrsSchedule=[]; waveStartTime=0;
+  QUESTIONS=makeQuestions();
+}
+
+function updateHUD(st){
+  const faceDisp  = document.getElementById('face-display');
+  const stageDisp = document.getElementById('stage-display');
+  const progBar   = document.getElementById('hud-progress-bar');
+  if(st >= 19){
+    if(faceDisp)  faceDisp.innerHTML = `<span style="color:#ff4400;text-shadow:0 0 8px rgba(255,80,0,0.8);">鬼面</span>`;
+    if(stageDisp) stageDisp.innerHTML = `<span style="color:#ff4400;text-shadow:0 0 8px rgba(255,80,0,0.8);">ステージ${st}</span>`;
+    if(progBar){ progBar.style.background = 'linear-gradient(90deg,#ff4400,#ff8800)'; progBar.style.boxShadow = '0 0 6px rgba(255,100,0,0.6)'; }
+  } else if(st > 9){
+    if(faceDisp)  faceDisp.innerHTML = `<span style="color:#ff88ff;text-shadow:0 0 8px rgba(255,100,255,0.5);">裏面</span>`;
+    if(stageDisp) stageDisp.innerHTML = `<span style="color:#ff88ff;">ステージ${st}</span>`;
+    if(progBar){ progBar.style.background = 'linear-gradient(90deg,#ff88ff,#cc44ff)'; progBar.style.boxShadow = '0 0 6px rgba(255,100,255,0.5)'; }
+  } else {
+    if(faceDisp)  faceDisp.innerHTML = `<span style="color:rgba(0,255,136,0.85);">表面</span>`;
+    if(stageDisp) stageDisp.innerHTML = `<span style="color:rgba(0,255,136,0.85);text-shadow:0 0 8px rgba(0,255,136,0.4);">ステージ${st}</span>`;
+    if(progBar){ progBar.style.background = 'linear-gradient(90deg,rgba(0,255,136,0.7),rgba(0,255,136,1))'; progBar.style.boxShadow = '0 0 6px rgba(0,255,136,0.5)'; }
+  }
+  // 進捗バー幅：現在ステージ内の正解数 / そのステージのq数
+  if(progBar){
+    const stageDef = STAGE_DEFS.find(d => d.st === st) || STAGE_DEFS[STAGE_DEFS.length-1];
+    const stageTotal = stageDef.q || 1;
+    const pct = Math.min(100, (stageQCount / stageTotal) * 100);
+    progBar.style.width = pct + '%';
+  }
+}
+
+function gameOver(){
+  gameState='gameover';
+  window._lastStageAtGameOver = getStageDef().st; // 到達ステージを保存
+  stopCursor();
+  // 不要な要素を即クリア・非表示
+  labelsRow.innerHTML='';
+  hintArea.classList.add('hidden');
+  const cp = document.getElementById('control-panel');
+  if(cp) cp.style.display = 'none';
+  // HUDを非表示
+  const uiGoEl = document.getElementById('ui');
+  if(uiGoEl) uiGoEl.style.display = 'none';
+  slimes = [];
+  spotlight = null;
+  particles_arr = [];
+  window._goScheduled = false;
+
+  goState = { phase:'show', t:0 };
+  if(currentWave) currentWave.alive = false;
+}
+
+// ゲームオーバー描画（gameLoop内で呼ばれる）
+function updateGoState(dt){
+  if(!goState) return;
+  goState.t += dt;
+  const t = goState.t;
+
+  // 心臓を痙攣させる（500bpm相当）
+  const vfInterval = 60000 / 500; // 120ms
+  if(t - (goState.lastBeat||0) >= vfInterval){
+    goState.lastBeat = t;
+    heartBeat.phase = 'beat';
+    heartBeat.t = 0;
+  }
+
+  // 2秒後にGAME OVERテキストを表示
+  if(t > 2000 && !goState.textShown){
+    goState.textShown = true;
+  }
+
+  // 5秒後にトップへ
+  if(t > 8000 && !goState.done){
+    goState.done = true;
+    gameState = 'idle';
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#000008';
+    ctx.fillRect(0,0,W,H);
+    returnToTop();
+    goState = null;
+    frameId = null;
+  }
+}
+
+function onMedalClick(num){
+  const earned = localStorage.getItem(`medal${num}`) === '1';
+  if(!earned) return; // 未獲得はタップ不可
+  overlay.style.display = 'none';
+  if(_overlayStarsRaf){ cancelAnimationFrame(_overlayStarsRaf); _overlayStarsRaf=null; }
+  const typeMap = {1:'omote',2:'omote',3:'omote',4:'ura',5:'ura',6:'ura',7:'oni',8:'oni',9:'oni'};
+  W = canvas.offsetWidth || 430;
+  H = canvas.offsetHeight || 700;
+  // クリックで続きのステージから開始
+  const cbMap = {
+    1: ()=>{ startGameFrom(4);  },   // メダル1→ST4から
+    2: ()=>{ startGameFrom(7);  },   // メダル2→ST7から
+    3: ()=>{ startGameFrom(10); },   // メダル3→裏面ST10から
+    4: ()=>{ startGameFrom(13); },   // メダル4→ST13から
+    5: ()=>{ startGameFrom(16); },   // メダル5→ST16から
+    6: ()=>{ startGameFrom(19); },   // メダル6→ST19から（鬼面）
+    7: ()=>{ startGameFrom(22); },   // メダル7→ST22から
+    8: ()=>{ startGameFrom(25); },   // メダル8→ST25から
+    9: ()=>{ returnToTop(); }         // メダル9→トップへ
+  };
+  const _btnNum = num < 9 ? num + 1 : 10;
+  startCelebration(typeMap[num], cbMap[num], num, _btnNum);
+}
+
+
+function resetAllRecords(){
+  if(!confirm('すべての記録をリセットしますか？')) return;
+  for(let i=1;i<=9;i++) localStorage.removeItem(`medal${i}`);
+  localStorage.removeItem('hintVisible');
+  applyMedalState();
+  // スタートボタンをstart1に戻す
+  const btn = document.getElementById('start-btn');
+  if(btn) btn.src = 'start.webp';
+}
+function applyMedalState(){
+  [1,2,3,4,5,6,7,8,9].forEach(n=>{
+    const m=document.getElementById(`medal${n}-img`);
+    if(m) m.classList.toggle('earned', localStorage.getItem(`medal${n}`)==='1');
+  });
+}
+
+function returnToTop(){
+  const cp = document.getElementById('control-panel');
+  if(cp) cp.style.display = '';
+  overlay.innerHTML = _topOverlayHTML;
+  overlay.style.display = 'flex';
+  startOverlayStars();
+  startSlideshow();
+  applyMedalState();
+  const btn1 = document.getElementById('start-btn');
+  if(btn1){
+    btn1.addEventListener('click', ()=>{
+      const src = btn1.getAttribute('src') || '';
+  // startN.webp から開始ステージを決定
+  const stStartMap = {
+    '1': ()=>startGame(),
+    '2': ()=>startGameFrom(4),
+    '3': ()=>startGameFrom(7),
+    '4': ()=>startGameFrom(10),
+    '5': ()=>startGameFrom(12),
+    '6': ()=>startGameFrom(15),
+    '7': ()=>startGameFrom(19),
+    '8': ()=>startGameFrom(22),
+    '9': ()=>startGameFrom(25),
+    '10': ()=>returnToTop(),
+  };
+  const m = src.match(/start(\d+)\.webp/);
+  const fn = m ? stStartMap[m[1]] : null;
+  if(fn) fn(); else startGame();
+    });
+  }
+}
+
+function drawGameOverAnim(){
+  if(!gameOverAnim) return;
+  const p = gameOverAnim.progress; // 0→1
+  const now = performance.now();
+
+  // ── フェーズ分割 ──
+  // 0.00-0.25: 画面が赤く染まる
+  // 0.25-0.60: DANGER LINE が画面全体を覆う（赤い稲妻）
+  // 0.60-0.85: GAME OVERテキスト降下
+  // 0.85-1.00: フェードアウト→オーバーレイへ
+
+  ctx.save();
+
+  // ─ 赤フラッシュ ─
+  if(p < 0.35){
+    const a = (p/0.35);
+    const ease = a*a*(3-2*a);
+    // 画面周囲から中央へ赤が迫るヴィネット
+    const vg = ctx.createRadialGradient(W/2,H/2,0, W/2,H/2,Math.max(W,H)*0.75);
+    vg.addColorStop(0,   `rgba(180,0,0,0)`);
+    vg.addColorStop(0.55,`rgba(180,0,0,${0.25*ease})`);
+    vg.addColorStop(1,   `rgba(220,0,0,${0.75*ease})`);
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+    // 画面全体の赤オーバーレイ
+    ctx.fillStyle=`rgba(150,0,0,${0.18*ease})`;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // ─ 電離線が全体を覆う ─
+  if(p >= 0.15 && p < 0.72){
+    const lp = Math.min(1,(p-0.15)/0.57);
+    const ease = lp<0.5?2*lp*lp:-1+(4-2*lp)*lp;
+    // 複数の赤い横線が画面を埋める
+    const lineCount = Math.floor(ease * 18)+1;
+    for(let i=0;i<lineCount;i++){
+      const ly = (i/(lineCount)) * H * ease + (now*0.04+i*37)%40 - 20;
+      const sinAmp = 6 + Math.sin(now*0.003+i)*4;
+      ctx.beginPath();
+      for(let x=0;x<=W;x+=4){
+        const y2 = ly + Math.sin(x*0.06+now*0.008+i)*sinAmp;
+        x===0?ctx.moveTo(x,y2):ctx.lineTo(x,y2);
+      }
+      ctx.strokeStyle=`rgba(255,${30+i*8},${30+i*4},${0.55*ease})`;
+      ctx.lineWidth=1.5+Math.random()*1;
+      ctx.shadowColor='#ff0000'; ctx.shadowBlur=8;
+      ctx.stroke();
+    }
+    // 全体を赤く
+    ctx.fillStyle=`rgba(120,0,0,${0.30*ease})`;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // ─ GAME OVER テキスト（上端固定） ─
+  if(p >= 0.10){
+    const tp = Math.min(1,(p-0.10)/0.20);
+    const ease = tp<0.5?2*tp*tp:-1+(4-2*tp)*tp;
+    const ty = 36;
+
+    const tg = ctx.createRadialGradient(W/2,ty,0,W/2,ty,160);
+    tg.addColorStop(0,'rgba(200,0,0,0.45)');
+    tg.addColorStop(1,'rgba(200,0,0,0)');
+    ctx.fillStyle=tg; ctx.fillRect(0,0,W,ty+80);
+
+    const shake = (Math.random()-0.5)*4*ease;
+    ctx.font='bold 38px "Courier New",monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.shadowColor='#ff0000'; ctx.shadowBlur=30;
+    ctx.fillStyle=`rgba(255,40,40,${ease})`;
+    ctx.fillText('GAME OVER', W/2+shake, ty+shake);
+    ctx.shadowBlur=8;
+    ctx.fillStyle=`rgba(255,160,160,${ease*0.6})`;
+    ctx.fillText('GAME OVER', W/2+shake, ty+shake);
+  }
+
+  // ─ フェードアウト ─
+  if(p >= 0.85){
+    const fp=(p-0.85)/0.15;
+    ctx.fillStyle=`rgba(0,0,0,${fp*0.92})`;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  ctx.restore();
+}
+
+// ── トップ画面 星背景 ─────────────────────────────────────────────
+// トップオーバーレイのHTMLを保存
+const _topOverlayHTML = document.getElementById('overlay').innerHTML;
+
+// ── トップ画面 星背景 ─────────────────────────────────────────────
+let _overlayStarsRaf = null;
+function startOverlayStars(){
+  const cv = document.getElementById('overlay-stars');
+  if(!cv) return;
+  if(_overlayStarsRaf){ cancelAnimationFrame(_overlayStarsRaf); _overlayStarsRaf=null; }
+  const cx = cv.getContext('2d');
+  let W2, H2;
+  function init(){
+    W2 = cv.width  = cv.offsetWidth  || window.innerWidth;
+    H2 = cv.height = cv.offsetHeight || window.innerHeight;
+    cx.fillStyle='#000008';
+    cx.fillRect(0,0,W2,H2);
+  }
+  function draw(){ cx.fillStyle='#000008'; cx.fillRect(0,0,W2,H2); }
+  init();
+  window.addEventListener('resize', init);
+  function loop(){ draw(); _overlayStarsRaf=requestAnimationFrame(loop); }
+  loop();
+}
+
+// ── スライドショー ────────────────────────────────────────────────
+function startSlideshow(){ /* スライドショー削除済み */ }
+
+// 初期起動
+startOverlayStars();
+startSlideshow();
+
+function startGame(){
+  overlay.style.display='none';
+  if(_overlayStarsRaf){ cancelAnimationFrame(_overlayStarsRaf); _overlayStarsRaf=null; }
+  if(frameId) cancelAnimationFrame(frameId);
+  if(celebFrameId){ cancelAnimationFrame(celebFrameId); celebFrameId=null; }
+  gameState='paused'; // showStageAnnounce終了時に'playing'に変わる
+  initGame();
+  // ステージ1のアナウンスを表示してからゲーム開始
+  showStageAnnounce(1, ()=>spawnWave(pickQuestion(), true));
+}
+
+// 裏面（ST11）または鬼面（ST21）から直接開始
+function startGameFrom(startSt){
+  overlay.style.display='none';
+  if(_overlayStarsRaf){ cancelAnimationFrame(_overlayStarsRaf); _overlayStarsRaf=null; }
+  if(frameId) cancelAnimationFrame(frameId);
+  if(celebFrameId){ cancelAnimationFrame(celebFrameId); celebFrameId=null; }
+  gameState='paused'; // showStageAnnounce終了時に'playing'に変わる
+
+  // initGameの処理を流用しつつ、questionCountを開始ステージ直前に設定
+  score=0; level=1; combo=0; stageQCount=0; window._goScheduled=false;
+  updateHUD(startSt);
+  levelEl.textContent = startSt === 21 ? '21' : String(startSt);
+  particles_arr=[]; currentWave=null; usedIndices=[]; answered=false;
+  labelsRow.innerHTML=''; labelData=[];
+  slimes=[]; dischargeX=dischargeMinX; targetDischargeX=dischargeMinX; spotlight=null;
+  stageEffects={slime:false,spotlight:false,invert:false};
+  const _ha=document.getElementById('hint-area');
+  if(_ha){ _ha.classList.add('hidden'); }
+  heartBeat={scale:1.0, phase:'idle', t:0};
+  goState=null;
+  heartX=0; heartY=-999;
+  qrsSchedule=[]; waveStartTime=0;
+  QUESTIONS=makeQuestions();
+
+  // questionCountを開始ステージの先頭に合わせる
+  let qcOffset = 0;
+  for(const d of STAGE_DEFS){
+    if(d.st >= startSt) break;
+    qcOffset += d.q;
+  }
+  questionCount = qcOffset;
+
+  // control-panelとUIはshowStageAnnounce内で管理される
+  showStageAnnounce(startSt, ()=>spawnWave(pickQuestion(), true));
+}
+
+document.getElementById('start-btn').addEventListener('click', ()=>{
+  const btn = document.getElementById('start-btn');
+  const src = btn ? (btn.getAttribute('src') || '') : '';
+  // startN.webp から開始ステージを決定
+  const stStartMap = {
+    '1': ()=>startGame(),
+    '2': ()=>startGameFrom(4),
+    '3': ()=>startGameFrom(7),
+    '4': ()=>startGameFrom(10),
+    '5': ()=>startGameFrom(12),
+    '6': ()=>startGameFrom(15),
+    '7': ()=>startGameFrom(19),
+    '8': ()=>startGameFrom(22),
+    '9': ()=>startGameFrom(25),
+    '10': ()=>returnToTop(),
+  };
+  const m = src.match(/start(\d+)\.webp/);
+  const fn = m ? stStartMap[m[1]] : null;
+  if(fn) fn(); else startGame();
+});
+applyMedalState();
+
+// 現在のヒント文（互換用・使用箇所なし）
+let currentHintContent = '';
+
+// 初期適用（hint-areaは hidden のまま開始）
+
+// ── 虫眼鏡機能 ────────────────────────────────────────────────────────────
+(function(){
+  const ZOOM = 3;          // 拡大倍率
+  const LENS_R = 90;       // 虫眼鏡の半径(px)
+  const BORDER = 3;        // 枠の太さ
+  let active = false;
+  let lensX = 0, lensY = 0; // canvas座標系でのタッチ位置
+
+
+
+  function getCanvasPos(clientX, clientY){
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) * (W / rect.width),
+      y: (clientY - rect.top)  * (H / rect.height),
+    };
+  }
+
+  // エフェクト用スナップショット（canvasと同じ実ピクセルサイズ）
+  const snapCanvas = document.createElement('canvas');
+  const snapCtx = snapCanvas.getContext('2d');
+
+  function drawLens(){
+    if(!active || !currentWave || !currentWave.ready || !currentWave.alive) return;
+    const w = currentWave;
+    if(!w.img.complete || w.img.naturalWidth===0) return;
+
+    const cx = lensX, cy = lensY;
+    const dpr = window.devicePixelRatio || 1;
+
+    // ── ハイブリッド方式 ──────────────────────────────────────────────
+    // レイヤー1: 元画像から直接切り出し（高画質・スポットライト前の状態）
+    // レイヤー2: canvasスナップショットからエフェクト部分のみ合成
+    // （スポットライトマスク・スライム・パーティクル）
+
+    // 元画像→canvas座標の変換係数
+    const imgScaleX = w.img.naturalWidth  / w.waveW;
+    const imgScaleY = w.img.naturalHeight / w.h;
+
+    // タッチ位置の元画像上の対応ピクセル
+    // 反転面では切り出し座標も反転（動きを合わせるため）
+    let relX = (cx - w.waveX) / w.waveW;
+    let relY = (cy - w.y)     / w.h;
+    if(w.rot){ relX = 1 - relX; relY = 1 - relY; }
+    const imgCx = relX * w.img.naturalWidth;
+    const imgCy = relY * w.img.naturalHeight;
+
+    // 元画像から切り出す範囲（LENS_R/ZOOM px 分）
+    const srcHalfW = (LENS_R / ZOOM) * imgScaleX;
+    const srcHalfH = (LENS_R / ZOOM) * imgScaleY;
+    const sx  = Math.max(0, imgCx - srcHalfW);
+    const sy  = Math.max(0, imgCy - srcHalfH);
+    const sx2 = Math.min(w.img.naturalWidth,  imgCx + srcHalfW);
+    const sy2 = Math.min(w.img.naturalHeight, imgCy + srcHalfH);
+    const sw = sx2 - sx, sh = sy2 - sy;
+    const dw = sw / imgScaleX * ZOOM;
+    const dh = sh / imgScaleY * ZOOM;
+    const dx = cx - (imgCx - sx) / imgScaleX * ZOOM;
+    const dy = cy - (imgCy - sy) / imgScaleY * ZOOM;
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // 円クリップ
+    ctx.beginPath();
+    ctx.arc(cx, cy, LENS_R, 0, Math.PI*2);
+    ctx.clip();
+
+    // ── レイヤー1: 元画像から高画質で直接描画 ──
+    ctx.fillStyle = '#000008';
+    ctx.fill(); // 背景黒
+    if(w.rot){
+      // 反転面: レンズ中心(cx,cy)を軸に180度回転して描画
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(Math.PI);
+      ctx.translate(-cx, -cy);
+      ctx.drawImage(w.img, sx, sy, sw, sh, dx, dy, dw, dh);
+      ctx.restore();
+    } else {
+      ctx.drawImage(w.img, sx, sy, sw, sh, dx, dy, dw, dh);
+    }
+
+    // ── レイヤー2: スポットライト暗闇マスクとスライムのみ合成 ──
+    // 心電図ピクセルは上書きせず、エフェクトのみを正確に重ねる
+    if(stageEffects && stageEffects.spotlight && spotlight){
+      // スポットライトの暗闇をレンズ内座標で再描画
+      // （元画像の高画質描画の上に暗闇だけを乗せる）
+      const spCx = cx + (spotlight.x - cx) * ZOOM;
+      const spCy = cy + (spotlight.y - cy) * ZOOM;
+      const spR  = spotlight.r * ZOOM;
+
+      // 暗闇レイヤー（心電図エリアをZOOM倍座標で覆う）
+      const darkX = cx + (w.waveX - cx) * ZOOM;
+      const darkY = cy + (w.y - cy) * ZOOM;
+      const darkW = w.waveW * ZOOM;
+      const darkH = w.h * ZOOM;
+
+      // 一時canvasで destination-out マスクを作る
+      const tmpC = document.createElement('canvas');
+      tmpC.width = LENS_R*2; tmpC.height = LENS_R*2;
+      const tmpX = tmpC.getContext('2d');
+
+      // 1) 暗闇で全体を塗る
+      tmpX.fillStyle = 'rgba(0,0,0,0.93)';
+      tmpX.fillRect(0, 0, LENS_R*2, LENS_R*2);
+
+      // 2) スポット位置をdestination-outで抜く（レンズ座標系に変換）
+      tmpX.globalCompositeOperation = 'destination-out';
+      const gSpot = tmpX.createRadialGradient(
+        spCx-cx+LENS_R, spCy-cy+LENS_R, 0,
+        spCx-cx+LENS_R, spCy-cy+LENS_R, spR
+      );
+      gSpot.addColorStop(0,    'rgba(0,0,0,1)');
+      gSpot.addColorStop(0.6,  'rgba(0,0,0,0.85)');
+      gSpot.addColorStop(0.85, 'rgba(0,0,0,0.3)');
+      gSpot.addColorStop(1,    'rgba(0,0,0,0)');
+      tmpX.beginPath();
+      tmpX.arc(spCx-cx+LENS_R, spCy-cy+LENS_R, spR, 0, Math.PI*2);
+      tmpX.fillStyle = gSpot;
+      tmpX.fill();
+
+      // 3) 心電図エリアのみにクリップして暗闇を合成
+      ctx.drawImage(tmpC, 0, 0, LENS_R*2, LENS_R*2,
+                    cx-LENS_R, cy-LENS_R, LENS_R*2, LENS_R*2);
+    }
+
+    // スライム: 画像を直接ZOOM倍で描画（高画質・スナップ不使用）
+    if(stageEffects && stageEffects.slime && slimes && slimes.length > 0){
+      for(const sl of slimes){
+        if(Math.abs(sl.x - cx) > LENS_R/ZOOM + sl.w*1.5) continue;
+        if(Math.abs(sl.y - cy) > LENS_R/ZOOM + sl.w*1.5) continue;
+        const slImg = SLIME_IMGS[sl.key];
+        if(!slImg || !slImg.complete || slImg.naturalWidth===0) continue;
+        const slCx = cx + (sl.x - cx) * ZOOM;
+        const slCy = cy + (sl.y - cy) * ZOOM;
+        const slW  = sl.w * ZOOM;
+        // wobbleスケールも反映
+        const scX = 1 + Math.sin(sl.wobble) * 0.08;
+        const scY = 1 - Math.sin(sl.wobble) * 0.06;
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.translate(slCx, slCy);
+        ctx.scale(scX, scY);
+        ctx.drawImage(slImg, -slW/2, -slW/2, slW, slW);
+        ctx.restore();
+      }
+    }
+
+    ctx.restore();
+
+    // 枠（グラデーション）
+    const grad = ctx.createRadialGradient(cx, cy, LENS_R - BORDER*3, cx, cy, LENS_R + BORDER);
+    grad.addColorStop(0, 'rgba(200,230,255,0.95)');
+    grad.addColorStop(1, 'rgba(60,140,255,0.3)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, LENS_R, 0, Math.PI*2);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = BORDER * 2;
+    ctx.stroke();
+
+    // ハイライト（レンズ感）
+    ctx.beginPath();
+    ctx.arc(cx - LENS_R*0.25, cy - LENS_R*0.3, LENS_R*0.25, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fill();
+  }
+
+  // gameLoop末尾から呼ばれるフック
+  window._magDrawLens = function(){
+    if(!active) return;
+    const hasEffects = stageEffects && (stageEffects.spotlight || stageEffects.slime);
+    if(hasEffects){
+      // エフェクトありの場合のみスナップショットを取る
+      snapCanvas.width  = canvas.width;
+      snapCanvas.height = canvas.height;
+      snapCtx.setTransform(1, 0, 0, 1, 0, 0);
+      snapCtx.drawImage(canvas, 0, 0);
+    }
+    drawLens();
+  };
+
+  function startLens(clientX, clientY){
+    if(!currentWave || !currentWave.ready || !currentWave.alive) return;
+    const pos = getCanvasPos(clientX, clientY);
+    const w = currentWave;
+    // 心電図エリア内のみ
+    if(pos.x < w.waveX || pos.x > w.waveX + w.waveW ||
+       pos.y < w.y      || pos.y > w.y + w.h) return;
+    lensX = pos.x; lensY = pos.y;
+    active = true;
+  }
+
+  function moveLens(clientX, clientY){
+    if(!active) return;
+    const pos = getCanvasPos(clientX, clientY);
+    lensX = pos.x; lensY = pos.y;
+  }
+
+  function stopLens(){
+    active = false;
+  }
+
+  // マウス
+  canvas.addEventListener('mousedown', e=>{ startLens(e.clientX, e.clientY); });
+  canvas.addEventListener('mousemove', e=>{ moveLens(e.clientX, e.clientY); });
+  canvas.addEventListener('mouseup',   ()=>{ stopLens(); });
+  canvas.addEventListener('mouseleave',()=>{ stopLens(); });
+
+  // タッチ
+  canvas.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if(e.touches.length===1) startLens(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:false});
+  canvas.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    if(e.touches.length===1) moveLens(e.touches[0].clientX, e.touches[0].clientY);
+  }, {passive:false});
+  canvas.addEventListener('touchend', e=>{ e.preventDefault(); stopLens(); }, {passive:false});
+})();
+
+</script>
+</body>
+</html>
