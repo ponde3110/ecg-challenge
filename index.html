@@ -7,8 +7,8 @@
 <title>ECGチャレンジ</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow:hidden;height:100dvh;width:100vw;display:flex;justify-content:center;}
-#game-container{position:relative;width:100%;max-width:430px;height:100dvh;overflow:hidden;background:#0a0a12;display:flex;flex-direction:column;}
+body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-y:auto;overflow-x:hidden;min-height:100dvh;width:100vw;display:flex;justify-content:center;align-items:flex-start;}
+#game-container{position:relative;width:100%;max-width:430px;min-height:100dvh;height:auto;overflow:visible;background:#0a0a12;display:flex;flex-direction:column;}
 
 /* Header */
 #ui{
@@ -48,7 +48,7 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow:
 }
 
 /* ECG falling area */
-#ecg-area{position:relative;flex:1;overflow:hidden;min-height:0;}
+#ecg-area{position:relative;flex:0 0 auto;width:100%;height:calc(min(100vw, 430px) * 1.55);overflow:hidden;}
 canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
 canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
 
@@ -273,77 +273,6 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
 .label-small{font-size:10px;color:#556;letter-spacing:3px;}
 
 /* ─── 横向き対応 ─── */
-@media (orientation: landscape) and (max-height: 600px) {
-  body { overflow: hidden; height: 100dvh; }
-
-  #game-container {
-    max-width: 100%;
-    width: 100%;
-    height: 100dvh;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: stretch;
-    overflow: hidden;
-  }
-
-  /* 左カラム：心電図 + HUDオーバーレイ */
-  #ecg-area {
-    position: relative;
-    flex: 0 0 50%;
-    width: 50%;
-    height: 100dvh;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  /* HUDを心電図の上にオーバーレイ */
-  #ui {
-    position: absolute !important;
-    top: 0; left: 0; right: 0;
-    z-index: 10;
-    width: 100% !important;
-    background: linear-gradient(180deg,rgba(0,10,30,0.88) 0%,rgba(0,6,18,0.6) 100%) !important;
-    padding: 4px 10px !important;
-  }
-
-  /* 右カラム：ヒント＋選択肢 */
-  #control-panel {
-    flex: 0 0 50%;
-    width: 50%;
-    height: 100dvh;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden;
-    background: linear-gradient(180deg,rgb(4,8,22) 0%,rgb(6,12,28) 100%);
-    box-shadow: -2px 0 12px rgba(0,0,0,0.5);
-    padding: 0;
-  }
-
-  /* ヒントエリア：右カラム上部にインライン配置 */
-  #hint-area {
-    position: relative !important;
-    left: auto !important;
-    top: auto !important;
-    transform: none !important;
-    width: calc(100% - 16px) !important;
-    max-width: 100% !important;
-    margin: 6px 8px 4px !important;
-    flex-shrink: 0;
-  }
-
-  /* 選択肢：残りの高さを使ってスクロール */
-  #labels-row {
-    flex: 1 1 0;
-    overflow-y: auto;
-    gap: 4px !important;
-    padding: 4px 8px 8px !important;
-  }
-  .diag-label {
-    font-size: 11px !important;
-    padding: 8px 10px !important;
-  }
-}
-
 #reset-btn{
   position:absolute;top:10px;right:10px;
   background:rgba(255,255,255,0.08);
@@ -638,34 +567,6 @@ const ecgArea = document.getElementById('ecg-area');
 let W, H;
 
 // 横向き判定
-function isLandscape(){
-  return window.matchMedia('(orientation: landscape) and (max-height: 600px)').matches;
-}
-
-// 横向き時：hint-areaをcontrol-panel先頭へ移動 / 縦向き時：ecg-areaへ戻す
-function syncHintAreaParent(){
-  const hintEl = document.getElementById('hint-area');
-  const cp     = document.getElementById('control-panel');
-  const lr     = document.getElementById('labels-row');
-  if(!hintEl || !cp || !lr) return;
-  if(isLandscape()){
-    if(hintEl.parentElement !== cp){
-      cp.insertBefore(hintEl, lr);
-    }
-    // position系スタイルをリセット（CSS側で制御）
-    hintEl.style.position  = '';
-    hintEl.style.top       = '';
-    hintEl.style.left      = '';
-    hintEl.style.transform = '';
-    hintEl.style.width     = '';
-    hintEl.style.margin    = '';
-  } else {
-    if(hintEl.parentElement !== ecgArea){
-      ecgArea.appendChild(hintEl);
-    }
-  }
-}
-
 // --- state ---
 let gameState='idle', score=0, level=1, combo=0; // score kept for internal use
 let goState = null; // ゲームオーバーシーケンス管理 {phase, t, bpm, lastBeat}
@@ -866,19 +767,10 @@ function resize(){
   // 向き変更時: currentWaveがあればサイズ・heart位置を再計算
   if(typeof currentWave !== 'undefined' && currentWave && currentWave.ready && currentWave.img){
     const ratio2 = currentWave.img.naturalWidth / currentWave.img.naturalHeight;
-    if(isLandscape()){
-      const hudH2   = 32;
-      const maxEcgH2 = (H - hudH2) * 0.52;
-      currentWave.h     = Math.min(W / ratio2, maxEcgH2);
-      currentWave.waveW = currentWave.h * ratio2;
-      currentWave.waveX = 0;
-      currentWave.y     = hudH2 + 4;
-    } else {
-      currentWave.waveW = W;
-      currentWave.h     = Math.min(W / ratio2, H * 0.62);
-      currentWave.waveX = 0;
-      currentWave.y     = 8;
-    }
+    currentWave.waveW = W;
+    currentWave.h     = Math.min(W / ratio2, H * 0.62);
+    currentWave.waveX = 0;
+    currentWave.y     = 8;
     const hImgW2 = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 50;
     heartBaseSize = hImgW2 / 2;
     const ecgBottom3 = currentWave.y + currentWave.h;
@@ -886,9 +778,9 @@ function resize(){
     const areaBelow3 = H - ecgBottom3;
     heartY = Math.min(ecgBottom3 + Math.max(areaBelow3 * 0.15, 40), H - 60);
     heartX = ecgRight3 - hImgW2 / 2 - 4;
-    // ヒントパネル：縦向きのみ再調整
+    // ヒントパネル位置を再調整
     const hintEl3 = document.getElementById('hint-area');
-    if(hintEl3 && hintEl3.parentElement === ecgArea && !hintEl3.classList.contains('hidden')){
+    if(hintEl3 && !hintEl3.classList.contains('hidden')){
       const panelH2 = hintEl3.offsetHeight || 80;
       const hintTop2 = heartY + (H - heartY) * 0.40;
       const clampedY2 = Math.min(hintTop2, H - panelH2 - 4);
@@ -898,12 +790,9 @@ function resize(){
   }
 }
 resize();
-window.addEventListener('resize', () => { syncHintAreaParent(); resize(); });
-// 横向き↔縦向き切替時も resize を呼ぶ
-window.addEventListener('orientationchange', () => { setTimeout(() => { syncHintAreaParent(); resize(); }, 250); });
-if(screen.orientation) screen.orientation.addEventListener('change', () => { setTimeout(() => { syncHintAreaParent(); resize(); }, 250); });
-// 初回syncも実行
-syncHintAreaParent();
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => { setTimeout(resize, 250); });
+if(screen.orientation) screen.orientation.addEventListener('change', () => { setTimeout(resize, 250); });
 
 function stopCursor(){
   if(cursorInterval){ clearInterval(cursorInterval); cursorInterval=null; }
@@ -964,21 +853,11 @@ function spawnWave(q, resetDanger=false){
   img.onload=()=>{
     const ratio = img.naturalWidth / img.naturalHeight;
     let ww, wh, waveX, waveY;
-    if(isLandscape()){
-      // 横向き：HUD分(32px)を除いた高さの50%以内で横幅一杯
-      const hudH  = 32;
-      const maxEcgH_ls = (H - hudH) * 0.52;
-      wh    = Math.min(W / ratio, maxEcgH_ls);
-      ww    = wh * ratio;
-      waveX = 0;
-      waveY = hudH + 4;
-    } else {
-      // 縦向き：横幅一杯・高さ62%以内
-      ww    = W;                              // 横幅一杯
-      wh    = Math.min(W / ratio, H * 0.62);
-      waveX = 0;
-      waveY = 8;
-    }
+    // 縦固定レイアウト：横幅一杯・高さ62%以内
+    ww    = W;
+    wh    = Math.min(W / ratio, H * 0.62);
+    waveX = 0;
+    waveY = 8;
     currentWave.waveW = ww;
     currentWave.h     = wh;
     currentWave.waveX = waveX;
@@ -1648,7 +1527,7 @@ function showStageAnnounce(stage, cb){
   const _annCpEl = document.getElementById('control-panel');
   const _annHint = document.getElementById('hint-area');
   if(_annUiEl) _annUiEl.style.display = 'none';
-  if(_annCpEl && !isLandscape()) _annCpEl.style.display = 'none';
+  if(_annCpEl) _annCpEl.style.display = 'none';
   if(_annHint) _annHint.classList.add('hidden');
   const ann=document.createElement('div');
   ann.style.cssText=`position:absolute;inset:0;display:flex;flex-direction:column;
@@ -1695,7 +1574,6 @@ function showStageAnnounce(stage, cb){
     // UI/HUDを再表示してからゲーム開始
     if(_annUiEl) _annUiEl.style.display = '';
     if(_annCpEl) _annCpEl.style.display = '';
-    syncHintAreaParent();
     cb();
     if(!frameId){ lastTime=performance.now(); frameId=requestAnimationFrame(gameLoop); }
   }, 2600);
@@ -2367,7 +2245,7 @@ function gameOver(){
   labelsRow.innerHTML='';
   hintArea.classList.add('hidden');
   const cp = document.getElementById('control-panel');
-  if(cp && !isLandscape()) cp.style.display = 'none';
+  if(cp) cp.style.display = 'none';
   // HUDを非表示
   const uiGoEl = document.getElementById('ui');
   if(uiGoEl) uiGoEl.style.display = 'none';
@@ -2463,8 +2341,6 @@ function returnToTop(){
   startOverlayStars();
   startSlideshow();
   applyMedalState();
-  // hint-areaの親要素をorientation毎に正しく設定
-  syncHintAreaParent();
 }
 
 function drawGameOverAnim(){
