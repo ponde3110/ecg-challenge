@@ -399,7 +399,7 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
     </div>
   
     <div id="overlay-bottom">
-      <img id="start-btn" src="start.webp" alt="START" onclick="startGame()">
+      <img id="start-btn" src="start.webp" alt="START" onclick="handleStartBtn()">
       <div style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1px;font-family:'Courier New',monospace;">© 2026 ponde3110</div>
     </div>
     <div id="overlay-disclaimer">
@@ -495,11 +495,9 @@ const QUESTIONS_RAW = [
   {img:'ecg/8.jpg',answer:'心房粗動（AFL）',choices:['心房細動（AF）','心室期外収縮（PVC）','心房期外収縮（PAC）','心房粗動（AFL）'],hint:'下壁誘導のノコギリ波形',bpm:75},
   {img:'ecg/9.jpg',answer:'発作性上室頻拍（PSVT）',choices:['心室頻拍（VT）','心室期外収縮（PVC）','心房期外収縮（PAC）','発作性上室頻拍（PSVT）'],hint:'規則正しい幅狭QRS頻脈',bpm:180},
   {img:'ecg/10.jpg',answer:'心室頻拍（VT）',choices:['心室頻拍（VT）','頻脈性心房細動（rapid AF)','心室期外収縮（PVC）','心房期外収縮（PAC）'],hint:'規則正しい幅広QRS頻脈',bpm:160},
+
   {img:'ecg/11.jpg',answer:'洞頻脈',choices:['正常','心房細動（AF）','洞頻脈','心房期外収縮（PAC）'],hint:'心拍数が100回以上',bpm:110},
-
-  {img:'ecg/12.jpg',answer:'房室ペーシング',choices:['左脚ブロック','心室期外収縮（PVC）','房室ペーシング','右脚ブロック'],hint:'PとQRSの前にスパイク',bpm:70},
-  
-
+  {img:'ecg/12.jpg',answer:'房室ペーシング',choices:['左脚ブロック','心室期外収縮（PVC）','房室ペーシング','右脚ブロック'],hint:'PとQRSの前にスパイク',bpm:72},
   {img:'ecg/13.jpg',answer:'頻脈性心房細動（rapid AF)',choices:['正常','頻脈性心房細動（rapid AF)','心室期外収縮（PVC）','心房期外収縮（PAC）'],hint:'Pなく絶対不整の頻脈',bpm:130},
   {img:'ecg/14.jpg',answer:'徐脈性心房細動（slow AF）',choices:['正常','徐脈性心房細動（slow AF）','心室期外収縮（PVC）','心房期外収縮（PAC）'],hint:'Pなく絶対不整の徐脈',bpm:45},
   {img:'ecg/15.jpg',answer:'ウェンケバッハ型（2度）房室ブロック',choices:['ウェンケバッハ型（2度）房室ブロック','徐脈性心房細動（slow AF）','心房期外収縮（PAC）','3度房室ブロック'],hint:'漸増PRとQRS脱落',bpm:50},
@@ -520,8 +518,6 @@ const QUESTIONS_RAW = [
   {img: 'ecg/30.jpg', answer: '洞不全',       choices: ['ウェンケバッハ型（2度）房室ブロック', '徐脈性心房細動（slow AF）', '洞不全', '3度房室ブロック'],hint: '洞機能低下による徐脈',bpm:38},
   
   {img:'ecg/31.jpg',answer:'房室ペーシング＋前壁の急性梗塞（AMI）',choices:['房室ペーシング＋前壁の陳旧性梗塞（OMI）','房室ペーシング＋下壁の急性梗塞（AMI）','房室ペーシング＋下壁の陳旧性梗塞（OMI）','房室ペーシング＋前壁の急性梗塞（AMI）'],hint:'PとQRSの前にスパイク',bpm:54},
-
-
   {img:'ecg/32.jpg',answer:'巨大陰性T波',choices:['ST低下','左脚ブロック','右脚ブロック','巨大陰性T波'],hint:'心尖部肥大型心筋症で多い',bpm:68},
   {img:'ecg/33.jpg',answer:'前側壁の急性梗塞（AMI）',choices:['下壁の急性梗塞（AMI）','前壁の急性梗塞（AMI）','側壁の急性梗塞（AMI）','前側壁の急性梗塞（AMI）'],hint:'ⅠとaVLにもST上昇あり',bpm:88},
   {img:'ecg/34.jpg',answer:'上室期外収縮（PAC）2連発',choices:['上室期外収縮（PAC）2連発','心室期外収縮（PVC）2連発','発作性上室頻拍（PSVT）','心房細動（AF）'],hint:'幅狭QRSの連発',bpm:72},
@@ -588,7 +584,7 @@ const QUESTIONS_RAW = [
   {img:'ecg/95.jpg',answer:'前壁と下壁の陳旧性梗塞（OMI）',choices:['前壁と下壁の陳旧性梗塞（OMI）','前壁の陳旧性梗塞（OMI）のみ','下壁の陳旧性梗塞（OMI）のみ','前壁と下壁の急性梗塞（AMI）'],hint:'R波高の総和が小さい',bpm:68},
   {img:'ecg/96.jpg',answer:'発作性上室頻拍（PSVT）',choices:['発作性上室頻拍（PSVT）','心室頻拍（VT）','心室細動（VF）','偽性心室頻拍（俗称）'],hint:'心室期外収縮（PVC）より心室性は否定的',bpm:180},
   {img:'ecg/97.jpg',answer:'呼吸性変動',choices:['呼吸性変動','冠静脈洞調律','移動性ペースメーカ','洞徐脈'],hint:'通常、心拍数は吸気時に早くなる',bpm:60},
-  {img:'ecg/98.jpg',answer:'多源性心房頻拍（MAT）',choices:['移動性ペースメーカ','多源性心房頻拍（MAT）','冠静脈洞調律','洞不整脈'],hint:'3種類以上のP',bpm:},
+  {img:'ecg/98.jpg',answer:'多源性心房頻拍（MAT）',choices:['移動性ペースメーカ','多源性心房頻拍（MAT）','冠静脈洞調律','洞不整脈'],hint:'3種類以上のP',bpm:114},
   {img:'ecg/99.jpg',answer:'両室ペーシング（心臓再同期療法）',choices:['両室ペーシング（心臓再同期療法）','通常の房室ペーシング','通常の心室ペーシング','左脚ブロック'],hint:'スパイク後の狭いQRS波形',bpm:70},
   {img:'ecg/100.jpg',answer:'左室肥大＋QT延長＋巨大陰性T波',choices:['左室肥大＋QT延長＋巨大陰性T波','巨大陰性T波のみ','左室肥大のみ','QT延長のみ'],hint:'本例はたこつぼ心筋症',bpm:72}
 ];
@@ -2380,28 +2376,6 @@ function returnToTop(){
   startOverlayStars();
   startSlideshow();
   applyMedalState();
-  const btn1 = document.getElementById('start-btn');
-  if(btn1){
-    btn1.addEventListener('click', ()=>{
-      const src = btn1.getAttribute('src') || '';
-  // startN.webp から開始ステージを決定
-  const stStartMap = {
-    '1': ()=>startGame(),
-    '2': ()=>startGameFrom(4),
-    '3': ()=>startGameFrom(7),
-    '4': ()=>startGameFrom(10),
-    '5': ()=>startGameFrom(12),
-    '6': ()=>startGameFrom(15),
-    '7': ()=>startGameFrom(19),
-    '8': ()=>startGameFrom(22),
-    '9': ()=>startGameFrom(25),
-    '10': ()=>returnToTop(),
-  };
-  const m = src.match(/start(\d+)\.webp/);
-  const fn = m ? stStartMap[m[1]] : null;
-  if(fn) fn(); else startGame();
-    });
-  }
 }
 
 function drawGameOverAnim(){
@@ -2520,6 +2494,26 @@ function startSlideshow(){ /* スライドショー削除済み */ }
 startOverlayStars();
 startSlideshow();
 
+function handleStartBtn(){
+  const btn = document.getElementById('start-btn');
+  const src = btn ? (btn.getAttribute('src') || '') : '';
+  const stStartMap = {
+    '1': ()=>startGame(),
+    '2': ()=>startGameFrom(4),
+    '3': ()=>startGameFrom(7),
+    '4': ()=>startGameFrom(10),
+    '5': ()=>startGameFrom(12),
+    '6': ()=>startGameFrom(15),
+    '7': ()=>startGameFrom(19),
+    '8': ()=>startGameFrom(22),
+    '9': ()=>startGameFrom(25),
+    '10': ()=>returnToTop(),
+  };
+  const m = src.match(/start(\d+)\.webp/);
+  const fn = m ? stStartMap[m[1]] : null;
+  if(fn) fn(); else startGame();
+}
+
 function startGame(){
   overlay.style.display='none';
   if(_overlayStarsRaf){ cancelAnimationFrame(_overlayStarsRaf); _overlayStarsRaf=null; }
@@ -2567,26 +2561,7 @@ function startGameFrom(startSt){
   showStageAnnounce(startSt, ()=>spawnWave(pickQuestion(), true));
 }
 
-document.getElementById('start-btn').addEventListener('click', ()=>{
-  const btn = document.getElementById('start-btn');
-  const src = btn ? (btn.getAttribute('src') || '') : '';
-  // startN.webp から開始ステージを決定
-  const stStartMap = {
-    '1': ()=>startGame(),
-    '2': ()=>startGameFrom(4),
-    '3': ()=>startGameFrom(7),
-    '4': ()=>startGameFrom(10),
-    '5': ()=>startGameFrom(12),
-    '6': ()=>startGameFrom(15),
-    '7': ()=>startGameFrom(19),
-    '8': ()=>startGameFrom(22),
-    '9': ()=>startGameFrom(25),
-    '10': ()=>returnToTop(),
-  };
-  const m = src.match(/start(\d+)\.webp/);
-  const fn = m ? stStartMap[m[1]] : null;
-  if(fn) fn(); else startGame();
-});
+// start-btn のクリック処理は onclick="handleStartBtn()" で管理（returnToTop後も復元される）
 applyMedalState();
 
 // 現在のヒント文（互換用・使用箇所なし）
