@@ -135,7 +135,6 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
 #hint-area{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
   width:90%;max-width:90%;
-  margin:8px auto 4px;
   padding:8px 20px 10px;
   background:rgba(255,200,40,0.07);
   border:none;
@@ -143,8 +142,11 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
   border-right:3px solid rgba(255,200,0,0.7);
   border-radius:3px;
   box-shadow:0 0 18px rgba(255,180,0,0.15),0 2px 8px rgba(0,0,0,0.4),inset 0 0 14px rgba(255,160,0,0.05);
+  position:absolute;
+  left:50%;transform:translateX(-50%);
   overflow:visible;
   transition:opacity .3s,visibility .3s;
+  z-index:5;
   pointer-events:none;
 }
 #hint-area::before{
@@ -321,14 +323,14 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
     <div id="magnifier-overlay">
       <canvas id="magnifier-canvas"></canvas>
     </div>
-  </div>
-
-  <div id="control-panel">
     <div id="hint-area">
       <div id="hint-stage"></div>
       <div id="hint-label">ヒ ン ト</div>
       <span id="hint-text"></span>
     </div>
+  </div>
+
+  <div id="control-panel">
     <div id="labels-row"></div>
   </div>
 
@@ -740,10 +742,10 @@ function resize(){
   // ecg-area は height:auto なので、ゲームに必要な高さをウィンドウから計算
   // ui(HUD)・hint-area・control-panel の実高を除いた残りをキャンバス高とする
   const uiH      = (document.getElementById('ui')            || {}).offsetHeight || 36;
-  const hintH    = (document.getElementById('hint-area')     || {}).offsetHeight || 0;
+  // hint-area は canvas 内に absolute 配置なのでレイアウト高さに含めない
   const cpH      = (document.getElementById('control-panel') || {}).offsetHeight || 0;
   const winH     = window.innerHeight;
-  H = Math.max(winH - uiH - hintH - cpH, 300);
+  H = Math.max(winH - uiH - cpH, 300);
 
   // canvas サイズを設定（ecg-area の高さがこれで確定する）
   canvas.width  = Math.round(W * dpr);
@@ -894,7 +896,7 @@ function spawnWave(q, resetDanger=false){
     const hintEl2 = document.getElementById('hint-area');
     if(hintEl2 && hintEl2.parentElement === ecgArea){
       const panelH = hintEl2.offsetHeight || 80;
-      const hintTop = heartY + (H - heartY) * 0.40;
+      const hintTop = heartY + (H - heartY) * 0.15;
       const clampedY = Math.min(hintTop, H - panelH - 4);
       hintEl2.style.top = clampedY + 'px';
       hintEl2.style.transform = 'translateX(-50%)';
