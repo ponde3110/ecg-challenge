@@ -48,7 +48,7 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
 }
 
 /* ECG falling area */
-#ecg-area{position:relative;flex:1 1 0;width:100%;min-height:0;overflow:hidden;}
+#ecg-area{position:relative;flex:0 0 auto;width:100%;height:auto;overflow:hidden;}
 #canvas{position:relative;display:block;width:100%;}
 
 /* Bottom control panel */
@@ -135,6 +135,7 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
 #hint-area{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
   width:90%;max-width:90%;
+  margin:8px auto 4px;
   padding:8px 20px 10px;
   background:rgba(255,200,40,0.07);
   border:none;
@@ -142,13 +143,9 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
   border-right:3px solid rgba(255,200,0,0.7);
   border-radius:3px;
   box-shadow:0 0 18px rgba(255,180,0,0.15),0 2px 8px rgba(0,0,0,0.4),inset 0 0 14px rgba(255,160,0,0.05);
-  position:relative;
-  margin:0 auto;
   overflow:visible;
   transition:opacity .3s,visibility .3s;
-  z-index:5;
   pointer-events:none;
-  flex-shrink:0;
 }
 #hint-area::before{
   content:'';position:absolute;top:0;left:0;right:0;height:1px;
@@ -174,7 +171,7 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
   max-width:100%;
   position:relative;z-index:1;
 }
-#hint-area.hidden{opacity:0;pointer-events:none;visibility:hidden;height:0;padding:0;overflow:hidden;border:none;box-shadow:none;margin:0;}
+#hint-area.hidden{opacity:0;pointer-events:none;visibility:hidden;}
 #hint-stage{display:none;}
 
 /* Overlay */
@@ -326,13 +323,12 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
     </div>
   </div>
 
-  <div id="hint-area">
-    <div id="hint-stage"></div>
-    <div id="hint-label">ヒ ン ト</div>
-    <span id="hint-text"></span>
-  </div>
-
   <div id="control-panel">
+    <div id="hint-area">
+      <div id="hint-stage"></div>
+      <div id="hint-label">ヒ ン ト</div>
+      <span id="hint-text"></span>
+    </div>
     <div id="labels-row"></div>
   </div>
 
@@ -743,9 +739,11 @@ function resize(){
   W = ecgArea.offsetWidth;
   // ecg-area は height:auto なので、ゲームに必要な高さをウィンドウから計算
   // ui(HUD)・hint-area・control-panel の実高を除いた残りをキャンバス高とする
-  // ecg-areaがflex:1で残り空間を占有するため、そのoffsetHeightをcanvas高として使う
-  const ecgAreaEl = document.getElementById('ecg-area');
-  H = Math.max((ecgAreaEl ? ecgAreaEl.offsetHeight : 0) || (window.innerHeight - 120), 300);
+  const uiH      = (document.getElementById('ui')            || {}).offsetHeight || 36;
+  const hintH    = (document.getElementById('hint-area')     || {}).offsetHeight || 0;
+  const cpH      = (document.getElementById('control-panel') || {}).offsetHeight || 0;
+  const winH     = window.innerHeight;
+  H = Math.max(winH - uiH - hintH - cpH, 300);
 
   // canvas サイズを設定（ecg-area の高さがこれで確定する）
   canvas.width  = Math.round(W * dpr);
@@ -783,11 +781,18 @@ function resize(){
     const areaBelow3 = H - ecgBottom3;
     heartY = Math.min(ecgBottom3 + Math.max(areaBelow3 * 0.15, 40), H - 60);
     heartX = ecgRight3 - hImgW2 / 2 - 4;
-    // hint-areaは通常フロー配置のため位置調整不要
+    // ヒントパネル位置を再調整
+    const hintEl3 = document.getElementById('hint-area');
+    if(hintEl3 && !hintEl3.classList.contains('hidden')){
+      const panelH2 = hintEl3.offsetHeight || 80;
+      const hintTop2 = heartY + (H - heartY) * 0.40;
+      const clampedY2 = Math.min(hintTop2, H - panelH2 - 4);
+      hintEl3.style.top = clampedY2 + 'px';
+      hintEl3.style.transform = 'translateX(-50%)';
+    }
   }
 }
-// 初回はレイアウト確定後に実行
-requestAnimationFrame(() => { requestAnimationFrame(resize); });
+resize();
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => { setTimeout(resize, 250); });
 if(screen.orientation) screen.orientation.addEventListener('change', () => { setTimeout(resize, 250); });
@@ -885,7 +890,15 @@ function spawnWave(q, resetDanger=false){
     const areaBelow2 = H - ecgBottom2;
     heartY = Math.min(ecgBottom2 + Math.max(areaBelow2 * 0.15, 40), H - 60);
     heartX = ecgRight2 - hImgW / 2 - 4;
-    // hint-areaは通常フロー配置のため位置調整不要
+    // ヒントパネル：縦向きのみ canvas 内に絶対配置
+    const hintEl2 = document.getElementById('hint-area');
+    if(hintEl2 && hintEl2.parentElement === ecgArea){
+      const panelH = hintEl2.offsetHeight || 80;
+      const hintTop = heartY + (H - heartY) * 0.40;
+      const clampedY = Math.min(hintTop, H - panelH - 4);
+      hintEl2.style.top = clampedY + 'px';
+      hintEl2.style.transform = 'translateX(-50%)';
+    }
     // 放電をリセット or 引き継ぎ
     if(resetDanger){
       dischargeX = dischargeMinX;
