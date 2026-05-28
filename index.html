@@ -48,9 +48,8 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
 }
 
 /* ECG falling area */
-#ecg-area{position:relative;flex:0 0 auto;width:100%;height:calc(min(100vw, 430px) * 1.55);overflow:hidden;}
-canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
-canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
+#ecg-area{position:relative;flex:0 0 auto;width:100%;height:auto;overflow:hidden;}
+#canvas{position:relative;display:block;width:100%;}
 
 /* Bottom control panel */
 #control-panel{flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,rgb(4,8,22) 0%,rgb(6,12,28) 100%);box-shadow:0 -2px 12px rgba(0,0,0,0.4);}
@@ -143,14 +142,12 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
   border-right:3px solid rgba(255,200,0,0.7);
   border-radius:3px;
   box-shadow:0 0 18px rgba(255,180,0,0.15),0 2px 8px rgba(0,0,0,0.4),inset 0 0 14px rgba(255,160,0,0.05);
-  position:relative;
-  align-self:center;
-  margin:8px 0 6px;
+  position:absolute;
+  left:50%;transform:translateX(-50%);
   overflow:visible;
   transition:opacity .3s,visibility .3s;
   z-index:5;
   pointer-events:none;
-  flex-shrink:0;
 }
 #hint-area::before{
   content:'';position:absolute;top:0;left:0;right:0;height:1px;
@@ -176,7 +173,7 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
   max-width:100%;
   position:relative;z-index:1;
 }
-#hint-area.hidden{display:none;}
+#hint-area.hidden{opacity:0;pointer-events:none;visibility:hidden;}
 #hint-stage{display:none;}
 
 /* Overlay */
@@ -326,12 +323,11 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;}
     <div id="magnifier-overlay">
       <canvas id="magnifier-canvas"></canvas>
     </div>
-  </div>
-
-  <div id="hint-area">
-    <div id="hint-stage"></div>
-    <div id="hint-label">ヒ ン ト</div>
-    <span id="hint-text"></span>
+    <div id="hint-area">
+      <div id="hint-stage"></div>
+      <div id="hint-label">ヒ ン ト</div>
+      <span id="hint-text"></span>
+    </div>
   </div>
 
   <div id="control-panel">
@@ -743,9 +739,15 @@ function resize(){
   const dpr = window.devicePixelRatio || 1;
 
   W = ecgArea.offsetWidth;
-  H = ecgArea.offsetHeight;
+  // ecg-area は height:auto なので、ゲームに必要な高さをウィンドウから計算
+  // ui(HUD)・hint-area・control-panel の実高を除いた残りをキャンバス高とする
+  const uiH      = (document.getElementById('ui')            || {}).offsetHeight || 36;
+  const hintH    = (document.getElementById('hint-area')     || {}).offsetHeight || 0;
+  const cpH      = (document.getElementById('control-panel') || {}).offsetHeight || 0;
+  const winH     = window.innerHeight;
+  H = Math.max(winH - uiH - hintH - cpH, 300);
 
-  // 実ピクセル
+  // canvas サイズを設定（ecg-area の高さがこれで確定する）
   canvas.width  = Math.round(W * dpr);
   canvas.height = Math.round(H * dpr);
 
@@ -781,6 +783,15 @@ function resize(){
     const areaBelow3 = H - ecgBottom3;
     heartY = Math.min(ecgBottom3 + Math.max(areaBelow3 * 0.15, 40), H - 60);
     heartX = ecgRight3 - hImgW2 / 2 - 4;
+    // ヒントパネル位置を再調整
+    const hintEl3 = document.getElementById('hint-area');
+    if(hintEl3 && !hintEl3.classList.contains('hidden')){
+      const panelH2 = hintEl3.offsetHeight || 80;
+      const hintTop2 = heartY + (H - heartY) * 0.40;
+      const clampedY2 = Math.min(hintTop2, H - panelH2 - 4);
+      hintEl3.style.top = clampedY2 + 'px';
+      hintEl3.style.transform = 'translateX(-50%)';
+    }
   }
 }
 resize();
@@ -881,6 +892,15 @@ function spawnWave(q, resetDanger=false){
     const areaBelow2 = H - ecgBottom2;
     heartY = Math.min(ecgBottom2 + Math.max(areaBelow2 * 0.15, 40), H - 60);
     heartX = ecgRight2 - hImgW / 2 - 4;
+    // ヒントパネル：縦向きのみ canvas 内に絶対配置
+    const hintEl2 = document.getElementById('hint-area');
+    if(hintEl2 && hintEl2.parentElement === ecgArea){
+      const panelH = hintEl2.offsetHeight || 80;
+      const hintTop = heartY + (H - heartY) * 0.40;
+      const clampedY = Math.min(hintTop, H - panelH - 4);
+      hintEl2.style.top = clampedY + 'px';
+      hintEl2.style.transform = 'translateX(-50%)';
+    }
     // 放電をリセット or 引き継ぎ
     if(resetDanger){
       dischargeX = dischargeMinX;
