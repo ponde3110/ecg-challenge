@@ -785,6 +785,7 @@ function resize(){
       H = neededH3;
       canvas.width        = Math.round(W * dpr);
       canvas.height       = Math.round(H * dpr);
+      canvas.style.width  = W + 'px';
       canvas.style.height = H + 'px';
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.imageSmoothingEnabled = true;
@@ -892,6 +893,7 @@ function spawnWave(q, resetDanger=false){
       const dpr2 = window.devicePixelRatio || 1;
       canvas.width        = Math.round(W * dpr2);
       canvas.height       = Math.round(H * dpr2);
+      canvas.style.width  = W + 'px';
       canvas.style.height = H + 'px';
       ctx.setTransform(dpr2, 0, 0, dpr2, 0, 0);
       ctx.imageSmoothingEnabled = true;
@@ -1203,8 +1205,8 @@ function startCelebration(type, cb, medalNum, btnNum){
 
   // ── 専用canvasをgame-container全面に重ねる ──────────────────────────
   const gc = document.getElementById('game-container');
-  const gcW = gc.offsetWidth;
-  const gcH = gc.offsetHeight;
+  const gcW = Math.min(gc.offsetWidth  || window.innerWidth,  430);
+  const gcH = window.innerHeight;
   const dpr = window.devicePixelRatio || 1;
 
   const cv = document.createElement('canvas');
