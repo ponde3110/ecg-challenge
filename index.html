@@ -48,8 +48,8 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
 }
 
 /* ECG falling area */
-#ecg-area{position:relative;flex:0 0 auto;width:100%;height:auto;overflow:hidden;}
-#canvas{position:relative;display:block;width:100%;}
+#ecg-area{position:relative;flex:0 0 auto;width:100%;overflow:hidden;}
+#canvas{display:block;width:100%;}
 
 /* Bottom control panel */
 #control-panel{flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,rgb(4,8,22) 0%,rgb(6,12,28) 100%);box-shadow:0 -2px 12px rgba(0,0,0,0.4);}
@@ -136,16 +136,18 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
   width:90%;max-width:90%;
   padding:8px 20px 10px;
-  margin:0 auto;
   background:rgba(255,200,40,0.07);
   border:none;
   border-left:3px solid rgba(255,200,0,0.7);
   border-right:3px solid rgba(255,200,0,0.7);
   border-radius:3px;
   box-shadow:0 0 18px rgba(255,180,0,0.15),0 2px 8px rgba(0,0,0,0.4),inset 0 0 14px rgba(255,160,0,0.05);
+  align-self:center;
+  margin:8px 0 6px;
   overflow:visible;
-  transition:opacity .3s,visibility .3s;
+  z-index:5;
   pointer-events:none;
+  flex-shrink:0;
 }
 #hint-area::before{
   content:'';position:absolute;top:0;left:0;right:0;height:1px;
@@ -171,7 +173,7 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
   max-width:100%;
   position:relative;z-index:1;
 }
-#hint-area.hidden{opacity:0;pointer-events:none;visibility:hidden;}
+#hint-area.hidden{display:none;}
 #hint-stage{display:none;}
 
 /* Overlay */
@@ -734,57 +736,52 @@ const hintText     = document.getElementById('hint-text');
 const overlay      = document.getElementById('overlay');
 
 function resize(){
-
   const dpr = window.devicePixelRatio || 1;
 
-  W = ecgArea.offsetWidth;
-  const uiH      = (document.getElementById('ui')            || {}).offsetHeight || 36;
-  const hintH    = (document.getElementById('hint-area')     || {}).offsetHeight || 0;
-  const cpH      = (document.getElementById('control-panel') || {}).offsetHeight || 0;
-  const winH     = window.innerHeight;
-  H = Math.max(winH - uiH - hintH - cpH, 300);
+  W = ecgArea.offsetWidth || window.innerWidth;
 
-  // canvas サイズを設定（ecg-area の高さがこれで確定する）
-  canvas.width  = Math.round(W * dpr);
-  canvas.height = Math.round(H * dpr);
+  // ecg-area の高さ = ウィンドウ高さ - HUD - ヒントパネル - 選択肢パネル
+  // ヒント・選択肢は hidden の可能性があるので、それぞれ offsetHeight で実高を取得
+  const uiEl = document.getElementById('ui');
+  const cpEl = document.getElementById('control-panel');
+  const uiH  = uiEl  ? uiEl.offsetHeight  : 36;
+  const cpH  = cpEl  ? cpEl.offsetHeight  : 0;
+  // ウィンドウ高から UI と選択肢を引いた残りをキャンバスに使う（最低 240px）
+  H = Math.max(window.innerHeight - uiH - cpH, 240);
 
-  // 見た目サイズ
+  // canvas の描画解像度と表示サイズを設定
+  canvas.width        = Math.round(W * dpr);
+  canvas.height       = Math.round(H * dpr);
   canvas.style.width  = W + 'px';
   canvas.style.height = H + 'px';
 
-  // 座標系をCSSピクセル基準へ
+  // 座標系を CSS ピクセル基準へ
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  // シャープ化
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  // 画面サイズ変更時に星キャッシュを再生成
+
   _ecgStarBuilt = false; _ecgStarCaches = [null,null,null];
-  // ゲームオーバー中はcanvasサイズ調整のみ（心臓・放電位置は保持）
+
   if(typeof gameState !== 'undefined' && gameState === 'gameover') return;
 
-  // 心臓サイズ・座標は resize 時に確定（心電図高は後で決まるのでここでは仮値）
   heartBaseSize = Math.min(W * 0.16, 65);
 
-  // 向き変更時: currentWaveがあればサイズ・heart位置を再計算
   if(typeof currentWave !== 'undefined' && currentWave && currentWave.ready && currentWave.img){
-    const ratio2 = currentWave.img.naturalWidth / currentWave.img.naturalHeight;
+    const ratio2      = currentWave.img.naturalWidth / currentWave.img.naturalHeight;
     currentWave.waveW = W;
     currentWave.h     = Math.min(W / ratio2, H * 0.62);
     currentWave.waveX = 0;
     currentWave.y     = 8;
     const hImgW2 = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 50;
-    heartBaseSize = hImgW2 / 2;
+    heartBaseSize    = hImgW2 / 2;
     const ecgBottom3 = currentWave.y + currentWave.h;
     const ecgRight3  = currentWave.waveX + currentWave.waveW;
     const areaBelow3 = H - ecgBottom3;
     heartY = Math.min(ecgBottom3 + Math.max(areaBelow3 * 0.15, 40), H - 60);
     heartX = ecgRight3 - hImgW2 / 2 - 4;
-    // ヒントパネルは canvas 外（通常フロー）に配置済みのため位置調整不要
   }
 }
 resize();
-setTimeout(resize, 50); // hint-area レイアウト確定後に再計算
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => { setTimeout(resize, 250); });
 if(screen.orientation) screen.orientation.addEventListener('change', () => { setTimeout(resize, 250); });
@@ -857,14 +854,12 @@ function spawnWave(q, resetDanger=false){
     currentWave.h     = wh;
     currentWave.waveX = waveX;
     currentWave.y     = waveY;
-    currentWave.ready=true;
+    currentWave.ready = true;
     waveStartTime = performance.now();
-    // gameLoopが未起動なら起動（showStageAnnounce経由でなく直接spawnWaveされた場合）
     if(!frameId){ lastTime=performance.now(); frameId=requestAnimationFrame(gameLoop); }
-    // QRSスケジュール生成: bpmから10秒間のQRS発火時刻を計算
+    // QRSスケジュール生成
     qrsSchedule = [];
     const bpm = currentWave.q.bpm || 75;
-    // ecg/18.jpg(VF)は拍動を2倍速に
     const isVF = currentWave.q.img === 'ecg/18.jpg';
     const intervalMs = (60000 / bpm) * (isVF ? 0.5 : 1);
     const ecgDurationMs = 10000;
@@ -872,23 +867,30 @@ function spawnWave(q, resetDanger=false){
       qrsSchedule.push({ timeMs: t, lastCycle: -1 });
     }
     // 心臓・discharge 座標
-    // ecg-areaの実際の高さを再取得（iPad Safariでレイアウト確定前にH=0になるのを防ぐ）
-    const actualH = ecgArea.getBoundingClientRect().height || ecgArea.offsetHeight || H;
-    if(actualH > 0) H = actualH;
     const ecgBottom2 = currentWave.y + currentWave.h;
     const ecgRight2  = currentWave.waveX + currentWave.waveW;
     const hImgW = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 50;
     heartBaseSize = hImgW / 2;
-    const areaBelow2 = H - ecgBottom2;
-    heartY = Math.min(ecgBottom2 + Math.max(areaBelow2 * 0.15, 40), H - 60);
+    heartY = ecgBottom2 + heartBaseSize + 12;   // ← 心電図直下に密着
     heartX = ecgRight2 - hImgW / 2 - 4;
-    // ヒントパネルは canvas 外（通常フロー）に配置済みのため位置調整不要
+
+    // キャンバス高をコンテンツに必要な分だけに圧縮（余白ゼロ）
+    const neededH = Math.ceil(heartY + heartBaseSize + 16);
+    if(neededH < H){
+      H = neededH;
+      const dpr2 = window.devicePixelRatio || 1;
+      canvas.width        = Math.round(W * dpr2);
+      canvas.height       = Math.round(H * dpr2);
+      canvas.style.height = H + 'px';
+      ctx.setTransform(dpr2, 0, 0, dpr2, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
     // 放電をリセット or 引き継ぎ
     if(resetDanger){
       dischargeX = dischargeMinX;
       targetDischargeX = dischargeMinX;
     }
-
     // スポットライト
     if(stageEffects.spotlight){
       const isOni = getStageDef().st >= 19;
@@ -904,7 +906,7 @@ function spawnWave(q, resetDanger=false){
     // スライム: 保存位置があれば復元、なければ新規spawn
     if(stageEffects.slime){
       if(_savedSlimes.length > 0){
-        slimes = _savedSlimes.map(s=>({...s})); // 同位置で再開
+        slimes = _savedSlimes.map(s=>({...s}));
         _savedSlimes = [];
       } else if(slimes.length === 0){
         spawnSlimes();
@@ -919,21 +921,19 @@ function spawnWave(q, resetDanger=false){
     speed:spd, rot, alive:true, ready:false, q};
   answered=false;
   buildLabels(q);
-  // HUD進捗バーを現在のステージ進捗で更新
   updateHUD(getStageDef().st);
   // ヒントパネル更新
-  const hintEl     = document.getElementById('hint-text');
-  const hintArea   = document.getElementById('hint-area');
-  const stageDef   = getStageDef();
-  const hintStageEl= document.getElementById('hint-stage');
-  const hintLbl    = document.getElementById('hint-label');
+  const hintEl      = document.getElementById('hint-text');
+  const hintArea    = document.getElementById('hint-area');
+  const stageDef    = getStageDef();
+  const hintStageEl = document.getElementById('hint-stage');
+  const hintLbl     = document.getElementById('hint-label');
   if(hintEl && hintArea){
     hintEl.style.color = '';
     hintEl.style.fontSize = '';
     if(hintStageEl) hintStageEl.innerHTML = '';
-
     if(stageDef.st >= 19){
-      // 鬼面：「・・・」固定・通常パネル
+      // 鬼面：「・・・」固定
       hintArea.classList.remove('hidden');
       hintArea.classList.remove('oni-mode');
       if(hintLbl) hintLbl.style.display = '';
@@ -941,7 +941,6 @@ function spawnWave(q, resetDanger=false){
       hintEl.innerHTML = '・・・';
       hintEl.style.color = 'rgba(255,200,0,0.45)';
       hintEl.style.fontSize = '13px';
-      // hint-area内の進捗バーがあれば削除
       const oldProg = hintArea.querySelector('.oni-progress');
       if(oldProg) oldProg.remove();
     } else {
