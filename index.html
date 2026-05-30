@@ -740,36 +740,19 @@ function resize(){
 
   W = ecgArea.offsetWidth || window.innerWidth;
 
-  // ecg-area の高さ = ウィンドウ高さ - HUD - ヒントパネル - 選択肢パネル
-  // ヒント・選択肢は hidden の可能性があるので、それぞれ offsetHeight で実高を取得
+  // H はこの時点では「十分大きな仮値」として設定し、
+  // currentWave がある場合は画像比率から正確に計算し直す
   const uiEl = document.getElementById('ui');
-  const cpEl = document.getElementById('control-panel');
-  const uiH  = uiEl  ? uiEl.offsetHeight  : 36;
-  const cpH  = cpEl  ? cpEl.offsetHeight  : 0;
-  // ウィンドウ高から UI と選択肢を引いた残りをキャンバスに使う（最低 240px）
-  H = Math.max(window.innerHeight - uiH - cpH, 240);
-
-  // canvas の描画解像度と表示サイズを設定
-  canvas.width        = Math.round(W * dpr);
-  canvas.height       = Math.round(H * dpr);
-  canvas.style.width  = W + 'px';
-  canvas.style.height = H + 'px';
-
-  // 座標系を CSS ピクセル基準へ
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-
-  _ecgStarBuilt = false; _ecgStarCaches = [null,null,null];
-
-  if(typeof gameState !== 'undefined' && gameState === 'gameover') return;
-
-  heartBaseSize = Math.min(W * 0.16, 65);
+  const uiH  = uiEl ? uiEl.offsetHeight : 36;
+  // cpH は含めない（cpH が縮んだcanvas依存で循環するため）
+  H = Math.max(window.innerHeight - uiH, 240);
 
   if(typeof currentWave !== 'undefined' && currentWave && currentWave.ready && currentWave.img){
-    const ratio2      = currentWave.img.naturalWidth / currentWave.img.naturalHeight;
+    const ratio2 = currentWave.img.naturalWidth / currentWave.img.naturalHeight;
+    // 心電図の高さ = 横幅をアスペクト比で割った値（横幅いっぱいに表示）
+    const ecgH   = W / ratio2;
     currentWave.waveW = W;
-    currentWave.h     = Math.min(W / ratio2, H * 0.62);
+    currentWave.h     = ecgH;
     currentWave.waveX = 0;
     currentWave.y     = 8;
     const hImgW2  = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 50;
@@ -778,20 +761,22 @@ function resize(){
     const ecgRight3  = currentWave.waveX + currentWave.waveW;
     heartY = ecgBottom3 + heartBaseSize + 12;
     heartX = ecgRight3 - hImgW2 / 2 - 4;
-
-    // canvas高をコンテンツに必要な分だけに圧縮
-    const neededH3 = Math.ceil(heartY + heartBaseSize + 16);
-    if(neededH3 < H){
-      H = neededH3;
-      canvas.width        = Math.round(W * dpr);
-      canvas.height       = Math.round(H * dpr);
-      canvas.style.width  = W + 'px';
-      canvas.style.height = H + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-    }
+    // canvas高 = 心電図 + 心臓エリアに必要な分だけ
+    H = Math.ceil(heartY + heartBaseSize + 16);
   }
+
+  canvas.width        = Math.round(W * dpr);
+  canvas.height       = Math.round(H * dpr);
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  _ecgStarBuilt = false; _ecgStarCaches = [null,null,null];
+
+  if(typeof gameState !== 'undefined' && gameState === 'gameover') return;
+  heartBaseSize = Math.min(W * 0.16, 65);
 }
 resize();
 window.addEventListener('resize', resize);
@@ -856,12 +841,11 @@ function spawnWave(q, resetDanger=false){
   const img=new Image();
   img.onload=()=>{
     const ratio = img.naturalWidth / img.naturalHeight;
-    let ww, wh, waveX, waveY;
-    // 縦固定レイアウト：横幅一杯・高さ62%以内
-    ww    = W;
-    wh    = Math.min(W / ratio, H * 0.62);
-    waveX = 0;
-    waveY = 8;
+    // 心電図は横幅いっぱい・アスペクト比を完全に保持（H制約なし）
+    const ww    = W;
+    const wh    = W / ratio;
+    const waveX = 0;
+    const waveY = 8;
     currentWave.waveW = ww;
     currentWave.h     = wh;
     currentWave.waveX = waveX;
@@ -886,19 +870,16 @@ function spawnWave(q, resetDanger=false){
     heartY = ecgBottom2 + heartBaseSize + 12;   // ← 心電図直下に密着
     heartX = ecgRight2 - hImgW / 2 - 4;
 
-    // キャンバス高をコンテンツに必要な分だけに圧縮（余白ゼロ）
-    const neededH = Math.ceil(heartY + heartBaseSize + 16);
-    if(neededH < H){
-      H = neededH;
-      const dpr2 = window.devicePixelRatio || 1;
-      canvas.width        = Math.round(W * dpr2);
-      canvas.height       = Math.round(H * dpr2);
-      canvas.style.width  = W + 'px';
-      canvas.style.height = H + 'px';
-      ctx.setTransform(dpr2, 0, 0, dpr2, 0, 0);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-    }
+    // canvas高 = コンテンツに必要な高さに確定（余白なし）
+    H = Math.ceil(heartY + heartBaseSize + 16);
+    const dpr2 = window.devicePixelRatio || 1;
+    canvas.width        = Math.round(W * dpr2);
+    canvas.height       = Math.round(H * dpr2);
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr2, 0, 0, dpr2, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     // 放電をリセット or 引き継ぎ
     if(resetDanger){
       dischargeX = dischargeMinX;
