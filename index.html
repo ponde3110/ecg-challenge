@@ -955,6 +955,7 @@ function spawnWave(q, resetDanger=false){
     if(stageDef.st >= 19){
       // 鬼面：「・・・」固定
       hintArea.classList.remove('hidden');
+      hintArea.style.display = '';
       hintArea.classList.remove('oni-mode');
       if(hintLbl) hintLbl.style.display = '';
       hintEl.style.display = '';
@@ -966,6 +967,7 @@ function spawnWave(q, resetDanger=false){
     } else {
       // 表面・裏面：常にヒント表示
       hintArea.classList.remove('hidden');
+      hintArea.style.display = '';
       hintArea.classList.remove('oni-mode');
       if(hintLbl) hintLbl.style.display = '';
       hintEl.style.display = '';
@@ -1206,6 +1208,14 @@ function startCelebration(type, cb, medalNum, btnNum){
   type = type || 'oni';
   gameState = 'celebration';
 
+  // hint-area・control-panel・labelsRowを確実に非表示（canvas外に見えるのを防ぐ）
+  const _ha = document.getElementById('hint-area');
+  if(_ha) _ha.style.display = 'none';
+  const _cp = document.getElementById('control-panel');
+  if(_cp) _cp.style.display = 'none';
+  const _lr = document.getElementById('labels-row');
+  if(_lr) _lr.innerHTML = '';
+
   // gameLoopを停止
   if(frameId){ cancelAnimationFrame(frameId); frameId = null; }
   if(celebFrameId){ cancelAnimationFrame(celebFrameId); celebFrameId = null; }
@@ -1219,7 +1229,8 @@ function startCelebration(type, cb, medalNum, btnNum){
   // ── 専用canvasをgame-container全面に重ねる ──────────────────────────
   const gc = document.getElementById('game-container');
   const gcW = Math.min(gc.offsetWidth  || window.innerWidth,  430);
-  const gcH = window.innerHeight;
+  // game-containerの実際の高さ全体を覆う（control-panel等が下に見えるのを防ぐ）
+  const gcH = gc.offsetHeight || window.innerHeight;
   const dpr = window.devicePixelRatio || 1;
 
   const cv = document.createElement('canvas');
@@ -1232,8 +1243,7 @@ function startCelebration(type, cb, medalNum, btnNum){
   cc.setTransform(dpr, 0, 0, dpr, 0, 0);
   cc.imageSmoothingEnabled = true;
   cc.imageSmoothingQuality = 'high';
-  // ループ外（confetti初期化など）でも使えるよう初期値を定数として保持
-  // ループ内では cv.style から毎フレーム再取得して回転に対応
+  // cW/cH: ループ外（confetti初期化など）でも使えるよう保持。回転時はresizeCelebCanvasで更新
   let cW = gcW, cH = gcH;
 
   // 画像
@@ -1334,7 +1344,7 @@ function startCelebration(type, cb, medalNum, btnNum){
   // 画面回転時にceleb-canvasのサイズを再設定（メダル縦長防止）
   function resizeCelebCanvas(){
     const _gcW = Math.min(gc.offsetWidth || window.innerWidth, 430);
-    const _gcH = window.innerHeight;
+    const _gcH = gc.offsetHeight || window.innerHeight;
     const _dpr = window.devicePixelRatio || 1;
     cv.width  = Math.round(_gcW * _dpr);
     cv.height = Math.round(_gcH * _dpr);
@@ -1362,8 +1372,10 @@ function startCelebration(type, cb, medalNum, btnNum){
     const btn = document.createElement('img');
     btn.id = 'celeb-next-btn';
     btn.src = btnSrc;
-    const btnBottom = Math.max(20, Math.min(120, cH * 0.12));
-    btn.style.cssText = `position:absolute;bottom:${btnBottom}px;left:50%;transform:translateX(-50%);width:min(260px,75%);cursor:pointer;z-index:31;filter:drop-shadow(0 0 12px rgba(0,255,136,0.4));transition:transform .12s,filter .12s;`;
+    // 縦横どちらでも十分な余白：短辺（min(w,h)）の15%を基準にする
+    const shortSide = Math.min(window.innerWidth, window.innerHeight);
+    const bottomOffset = Math.max(24, shortSide * 0.15);
+    btn.style.cssText = `position:fixed;bottom:${bottomOffset}px;left:50%;transform:translateX(-50%);width:min(260px,75%);cursor:pointer;z-index:31;filter:drop-shadow(0 0 12px rgba(0,255,136,0.4));transition:transform .12s,filter .12s;`;
     btn.addEventListener('mouseover', ()=>{ btn.style.transform='translateX(-50%) scale(1.04)'; btn.style.filter='drop-shadow(0 0 20px rgba(0,255,136,0.55))'; });
     btn.addEventListener('mouseout',  ()=>{ btn.style.transform='translateX(-50%)';             btn.style.filter='drop-shadow(0 0 12px rgba(0,255,136,0.4))'; });
     btn.addEventListener('mousedown', ()=>{ btn.style.transform='translateX(-50%) scale(0.97)'; });
@@ -1512,26 +1524,37 @@ function startCelebration(type, cb, medalNum, btnNum){
     const fade = Math.min(1, elapsed/500);
     cc.save(); cc.globalAlpha=fade;
     cc.textAlign='center'; cc.textBaseline='middle';
-    const fs = Math.floor(cW*0.055);
+    const fs = Math.floor(Math.min(cW * 0.06, 28));
     cc.font=`bold ${fs}px "Helvetica Neue","Hiragino Sans","Yu Gothic",sans-serif`;
 
-    cc.shadowColor='rgba(255,255,255,0.6)'; cc.shadowBlur=10; cc.fillStyle='rgba(255,255,255,0.92)';
-    cc.fillText(clearText, cW/2, cH*0.10);
+    // ボタンと同じ基準でレイアウト計算（window.innerHeight基準）
+    const shortSide = Math.min(window.innerWidth, window.innerHeight);
+    const btnBottom = Math.max(24, shortSide * 0.15); // showBtnと同じ値
+    const btnH = 54;
+    const btnTopY = window.innerHeight - btnBottom - btnH; // ボタン上端Y（viewport座標）
 
-    const medalSize = Math.min(cW*0.55, 220); // 幅＝高さで正円を保証
-    const medalY = cH*0.18;
+    // コンテンツが収まる縦範囲：viewport上端〜ボタン上端まで
+    const contentH = btnTopY - fs * 0.5; // 少し余白
+
+    // タイトルテキスト（上部）
+    const titleY = contentH * 0.12;
+    cc.shadowColor='rgba(255,255,255,0.6)'; cc.shadowBlur=10; cc.fillStyle='rgba(255,255,255,0.92)';
+    cc.fillText(clearText, cW/2, titleY);
+
+    // メダル：contentH内に収まるサイズ
+    const medalSize = Math.min(cW * 0.50, 200, contentH * 0.55);
+    const medalY = titleY + fs * 1.4;
     if(mainImg.complete && mainImg.naturalWidth>0){
-      // 幅・高さを同じ値にすることで、元画像が正方形であれば必ず正円に描画される
       cc.drawImage(mainImg, (cW-medalSize)/2, medalY, medalSize, medalSize);
     }
 
-    const medalBottom = medalY + medalSize * 1.05;
+    // 「メダル獲得！」テキスト（メダル直下）
+    const medalBottom = medalY + medalSize + fs * 0.8;
     cc.shadowColor='#ffdd00'; cc.shadowBlur=16; cc.fillStyle='#ffee88';
     if(_mnum === 9){
-      cc.fillText('ECGチャレンジ完全制覇', cW/2, medalBottom + fs*1.1);
-      cc.shadowBlur=0;
+      cc.fillText('ECGチャレンジ完全制覇', cW/2, medalBottom);
     } else {
-      cc.fillText('メダル獲得！', cW/2, medalBottom + fs*1.1);
+      cc.fillText('メダル獲得！', cW/2, medalBottom);
     }
 
     cc.restore();
