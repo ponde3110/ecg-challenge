@@ -1217,7 +1217,7 @@ function startCelebration(type, cb, medalNum, btnNum){
   type = type || 'oni';
   gameState = 'celebration';
 
-  // gameLoopを停止
+  // gameLoop・celebLoop を停止
   if(frameId){ cancelAnimationFrame(frameId); frameId = null; }
   if(celebFrameId){ cancelAnimationFrame(celebFrameId); celebFrameId = null; }
 
@@ -1227,33 +1227,33 @@ function startCelebration(type, cb, medalNum, btnNum){
   const oldBtn = document.getElementById('celeb-next-btn');
   if(oldBtn) oldBtn.remove();
 
-  // ── 専用canvasをgame-container全面に重ねる ──────────────────────────
-  // ※ offsetHeight は要素非表示前に計測する（非表示後は縮んで正確な値が取れない）
-  const gc = document.getElementById('game-container');
-  const gcW = Math.min(gc.offsetWidth  || window.innerWidth,  430);
-  const gcH = Math.max(gc.offsetHeight, window.innerHeight);  // 大きい方を使う
+  // UI 要素を確実に非表示（呼び出し元が済ませていない場合も対応）
+  const _ha2 = document.getElementById('hint-area');
+  if(_ha2) _ha2.style.display = 'none';
+  const _cp2 = document.getElementById('control-panel');
+  if(_cp2) _cp2.style.display = 'none';
+  const _ui2 = document.getElementById('ui');
+  if(_ui2) _ui2.style.display = 'none';
+  const _lr2 = document.getElementById('labels-row');
+  if(_lr2) _lr2.innerHTML = '';
+
+  // ── 専用canvas を body 直下に fixed で配置（game-container の高さに依存しない）──
+  const gcW = Math.min(window.innerWidth, 430);
+  const gcH = window.innerHeight;
   const dpr = window.devicePixelRatio || 1;
 
   const cv = document.createElement('canvas');
   cv.id = 'celeb-canvas';
-  cv.style.cssText = `position:absolute;top:0;left:0;width:${gcW}px;height:${gcH}px;z-index:30;`;
+  // position:fixed で viewport 全体を確実に覆う
+  cv.style.cssText = `position:fixed;top:0;left:50%;transform:translateX(-50%);width:${gcW}px;height:${gcH}px;z-index:9999;`;
   cv.width  = Math.round(gcW * dpr);
   cv.height = Math.round(gcH * dpr);
-  gc.appendChild(cv);
+  document.body.appendChild(cv);  // game-container ではなく body に追加
   const cc = cv.getContext('2d');
   cc.setTransform(dpr, 0, 0, dpr, 0, 0);
   cc.imageSmoothingEnabled = true;
   cc.imageSmoothingQuality = 'high';
-  // cW/cH: ループ外（confetti初期化など）でも使えるよう保持。回転時はresizeCelebCanvasで更新
   let cW = gcW, cH = gcH;
-
-  // canvas作成後に下層要素を非表示（canvasが覆うので透けて見えない）
-  const _ha = document.getElementById('hint-area');
-  if(_ha) _ha.style.display = 'none';
-  const _cp = document.getElementById('control-panel');
-  if(_cp) _cp.style.display = 'none';
-  const _lr = document.getElementById('labels-row');
-  if(_lr) _lr.innerHTML = '';
 
   // 画像
   const mainImg = new Image();
@@ -1352,8 +1352,8 @@ function startCelebration(type, cb, medalNum, btnNum){
 
   // 画面回転時にceleb-canvasのサイズを再設定（メダル縦長防止）
   function resizeCelebCanvas(){
-    const _gcW = Math.min(gc.offsetWidth || window.innerWidth, 430);
-    const _gcH = gc.offsetHeight || window.innerHeight;
+    const _gcW = Math.min(window.innerWidth, 430);
+    const _gcH = window.innerHeight;
     const _dpr = window.devicePixelRatio || 1;
     cv.width  = Math.round(_gcW * _dpr);
     cv.height = Math.round(_gcH * _dpr);
@@ -1375,15 +1375,14 @@ function startCelebration(type, cb, medalNum, btnNum){
     window.removeEventListener('resize', resizeCelebCanvas);
   }
 
-  function showBtn(btnTopY){
+  function showBtn(){
     if(btnShown) return;
     btnShown = true;
     const btn = document.createElement('img');
     btn.id = 'celeb-next-btn';
     btn.src = btnSrc;
-    // position:absolute でcanvas・コンテンツと同じスクロール系に乗せる
-    // これにより縦横どちらでもメダル獲得テキストの下に確実に表示される
-    btn.style.cssText = `position:absolute;top:${btnTopY}px;left:50%;transform:translateX(-50%);width:min(260px,75%);cursor:pointer;z-index:31;filter:drop-shadow(0 0 12px rgba(0,255,136,0.4));transition:transform .12s,filter .12s;`;
+    // position:fixed で viewport 基準（canvasと同じ fixed 系に乗せる）
+    btn.style.cssText = `position:fixed;bottom:32px;left:50%;transform:translateX(-50%);width:min(260px,75%);cursor:pointer;z-index:10000;filter:drop-shadow(0 0 12px rgba(0,255,136,0.4));transition:transform .12s,filter .12s;`;
     btn.addEventListener('mouseover', ()=>{ btn.style.transform='translateX(-50%) scale(1.04)'; btn.style.filter='drop-shadow(0 0 20px rgba(0,255,136,0.55))'; });
     btn.addEventListener('mouseout',  ()=>{ btn.style.transform='translateX(-50%)';             btn.style.filter='drop-shadow(0 0 12px rgba(0,255,136,0.4))'; });
     btn.addEventListener('mousedown', ()=>{ btn.style.transform='translateX(-50%) scale(0.97)'; });
@@ -1394,14 +1393,12 @@ function startCelebration(type, cb, medalNum, btnNum){
         dischargeX = dischargeMinX;
         targetDischargeX = dischargeMinX;
         gameState = 'paused';
-        // ボタンを押した瞬間にHUD・ヒント・control-panelを即座に非表示
         const uiEl = document.getElementById('ui');
         const cpEl = document.getElementById('control-panel');
         const hintEl = document.getElementById('hint-area');
         if(uiEl) uiEl.style.display = 'none';
         if(cpEl) cpEl.style.display = 'none';
-        if(hintEl) hintEl.classList.add('hidden');
-        // canvasを黒塗り
+        if(hintEl) hintEl.style.display = 'none';
         ctx.clearRect(0,0,W,H);
         ctx.fillStyle='#000008';
         ctx.fillRect(0,0,W,H);
@@ -1410,7 +1407,7 @@ function startCelebration(type, cb, medalNum, btnNum){
         returnToTop();
       }
     };
-    gc.appendChild(btn);
+    document.body.appendChild(btn);
   }
 
   // メダル番号に応じた詳細テキスト
@@ -1535,13 +1532,18 @@ function startCelebration(type, cb, medalNum, btnNum){
     const fs = Math.floor(Math.min(cW * 0.06, 28));
     cc.font=`bold ${fs}px "Helvetica Neue","Hiragino Sans","Yu Gothic",sans-serif`;
 
-    // タイトルテキスト（上部）
-    const titleY = cH * 0.12;
+    // ボタンは bottom:32px fixed（高さ約54px）→ 下部86px はボタン領域
+    // コンテンツはその上のスペースに収める
+    const btnAreaH = 86;
+    const usableH = cH - btnAreaH;
+
+    // タイトルテキスト
+    const titleY = usableH * 0.12;
     cc.shadowColor='rgba(255,255,255,0.6)'; cc.shadowBlur=10; cc.fillStyle='rgba(255,255,255,0.92)';
     cc.fillText(clearText, cW/2, titleY);
 
-    // メダル
-    const medalSize = Math.min(cW * 0.50, 200);
+    // メダル：usableH に収まるサイズ
+    const medalSize = Math.min(cW * 0.50, 200, usableH * 0.55);
     const medalY = titleY + fs * 1.4;
     if(mainImg.complete && mainImg.naturalWidth>0){
       cc.drawImage(mainImg, (cW-medalSize)/2, medalY, medalSize, medalSize);
@@ -1558,7 +1560,7 @@ function startCelebration(type, cb, medalNum, btnNum){
 
     cc.restore();
     // ボタン位置：テキスト下端 + 余白（position:absoluteでcanvasと同じスクロール系）
-    if(elapsed > 2000) showBtn(medalBottom + fs * 5);
+    if(elapsed > 2000) showBtn();
     celebFrameId = requestAnimationFrame(loop);
   }
   celebFrameId = requestAnimationFrame(loop);
@@ -2352,26 +2354,35 @@ function updateGoState(dt){
 function onMedalClick(num){
   const earned = localStorage.getItem(`medal${num}`) === '1';
   if(!earned) return;
-  overlay.style.display = 'none';
   if(_overlayStarsRaf){ cancelAnimationFrame(_overlayStarsRaf); _overlayStarsRaf=null; }
+
   const typeMap = {1:'omote',2:'omote',3:'omote',4:'ura',5:'ura',6:'ura',7:'oni',8:'oni',9:'oni'};
-  // W/H は game-container ベースで取得（canvas は overlay 後ろで 0 になっている可能性あり）
-  const _gc = document.getElementById('game-container');
-  W = Math.min(_gc.offsetWidth || window.innerWidth, 430);
-  H = Math.max(_gc.offsetHeight, window.innerHeight);
-  // クリックで続きのステージから開始
   const cbMap = {
-    1: ()=>{ startGameFrom(4);  },   // メダル1→ST4から
-    2: ()=>{ startGameFrom(7);  },   // メダル2→ST7から
-    3: ()=>{ startGameFrom(10); },   // メダル3→裏面ST10から
-    4: ()=>{ startGameFrom(13); },   // メダル4→ST13から
-    5: ()=>{ startGameFrom(16); },   // メダル5→ST16から
-    6: ()=>{ startGameFrom(19); },   // メダル6→ST19から（鬼面）
-    7: ()=>{ startGameFrom(22); },   // メダル7→ST22から
-    8: ()=>{ startGameFrom(25); },   // メダル8→ST25から
-    9: ()=>{ returnToTop(); }         // メダル9→トップへ
+    1: ()=>{ startGameFrom(4);  },
+    2: ()=>{ startGameFrom(7);  },
+    3: ()=>{ startGameFrom(10); },
+    4: ()=>{ startGameFrom(13); },
+    5: ()=>{ startGameFrom(16); },
+    6: ()=>{ startGameFrom(19); },
+    7: ()=>{ startGameFrom(22); },
+    8: ()=>{ startGameFrom(25); },
+    9: ()=>{ returnToTop(); }
   };
   const _btnNum = num < 9 ? num + 1 : 10;
+
+  // overlay を非表示にする前に game-container サイズを記録
+  const _gc = document.getElementById('game-container');
+  W = Math.min(_gc.offsetWidth || window.innerWidth, 430);
+
+  // すべての UI 要素を先に非表示にしてから overlay も消す
+  const _ui  = document.getElementById('ui');
+  const _cp  = document.getElementById('control-panel');
+  const _ha  = document.getElementById('hint-area');
+  if(_ui) _ui.style.display = 'none';
+  if(_cp) _cp.style.display = 'none';
+  if(_ha) _ha.style.display = 'none';
+  overlay.style.display = 'none';
+
   startCelebration(typeMap[num], cbMap[num], num, _btnNum);
 }
 
