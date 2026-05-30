@@ -749,7 +749,6 @@ function resize(){
 
   if(typeof currentWave !== 'undefined' && currentWave && currentWave.ready && currentWave.img){
     const ratio2 = currentWave.img.naturalWidth / currentWave.img.naturalHeight;
-    // 心電図の高さ = 横幅をアスペクト比で割った値（横幅いっぱいに表示）
     const ecgH   = W / ratio2;
     currentWave.waveW = W;
     currentWave.h     = ecgH;
@@ -761,8 +760,10 @@ function resize(){
     const ecgRight3  = currentWave.waveX + currentWave.waveW;
     heartY = ecgBottom3 + heartBaseSize + 12;
     heartX = ecgRight3 - hImgW2 / 2 - 4;
-    // canvas高 = 心電図 + 心臓エリアに必要な分だけ
     H = Math.ceil(heartY + heartBaseSize + 16);
+  } else if(heartBaseSize <= 0){
+    // currentWave未ロード時のみ暫定値（spawnWave onload後に正確な値で上書きされる）
+    heartBaseSize = Math.min(W * 0.16, 65);
   }
 
   canvas.width        = Math.round(W * dpr);
@@ -774,9 +775,6 @@ function resize(){
   ctx.imageSmoothingQuality = 'high';
 
   _ecgStarBuilt = false; _ecgStarCaches = [null,null,null];
-
-  if(typeof gameState !== 'undefined' && gameState === 'gameover') return;
-  heartBaseSize = Math.min(W * 0.16, 65);
 }
 resize();
 window.addEventListener('resize', resize);
