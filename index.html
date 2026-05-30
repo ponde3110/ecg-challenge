@@ -1171,11 +1171,17 @@ function onCorrect(lbl){
 // ─── メダル獲得＋お祝い共通処理 ───────────────────────────────────────
 function earnMedalAndCelebrate(medalNum, btnNum, type, nextCb){
   localStorage.setItem(`medal${medalNum}`,'1');
-  // 放電線を初期値にリセット
   dischargeX = dischargeMinX;
   targetDischargeX = dischargeMinX;
   updateHUD(getStage());
   if(currentWave) currentWave.alive=false;
+  // ヒントパネル・control-panel・HUDを非表示
+  const _ha = document.getElementById('hint-area');
+  if(_ha) _ha.classList.add('hidden');
+  const _cp = document.getElementById('control-panel');
+  if(_cp) _cp.style.display = 'none';
+  const _ui = document.getElementById('ui');
+  if(_ui) _ui.style.display = 'none';
   startCelebration(type, nextCb, medalNum, btnNum);
 }
 
@@ -1226,7 +1232,9 @@ function startCelebration(type, cb, medalNum, btnNum){
   cc.setTransform(dpr, 0, 0, dpr, 0, 0);
   cc.imageSmoothingEnabled = true;
   cc.imageSmoothingQuality = 'high';
-  // cW/cH はループ内で cv.style から毎フレーム動的に取得するため定数定義は不要
+  // ループ外（confetti初期化など）でも使えるよう初期値を定数として保持
+  // ループ内では cv.style から毎フレーム再取得して回転に対応
+  let cW = gcW, cH = gcH;
 
   // 画像
   const mainImg = new Image();
@@ -1335,6 +1343,7 @@ function startCelebration(type, cb, medalNum, btnNum){
     cc.setTransform(_dpr, 0, 0, _dpr, 0, 0);
     cc.imageSmoothingEnabled = true;
     cc.imageSmoothingQuality = 'high';
+    cW = _gcW; cH = _gcH;
   }
   window.addEventListener('resize', resizeCelebCanvas);
   if(screen.orientation) screen.orientation.addEventListener('change', ()=>setTimeout(resizeCelebCanvas, 250));
@@ -1394,7 +1403,7 @@ function startCelebration(type, cb, medalNum, btnNum){
   const clearText = _mnum ? (clearTextMap[_mnum] || faceLabel+'クリア！') : faceLabel+'クリア！';
 
   // 星を描画（独立canvas用・drawBgを使わず直接描画）
-  function drawCelebBg(cW, cH){
+  function drawCelebBg(){
     cc.fillStyle = '#000008';
     cc.fillRect(0, 0, cW, cH);
   }
@@ -1405,13 +1414,9 @@ function startCelebration(type, cb, medalNum, btnNum){
     const dt2 = celebLastTs !== null ? Math.min(ts - celebLastTs, 32) : 16;
     celebLastTs = ts;
     const elapsed = ts - startTs;
-    // 回転対応：毎フレーム現在のcanvasサイズを取得
-    // cv.style.width/height はCSS px 単位で設定されているのでそこから読む
-    const cW = parseFloat(cv.style.width)  || (cv.width  / (window.devicePixelRatio||1));
-    const cH = parseFloat(cv.style.height) || (cv.height / (window.devicePixelRatio||1));
 
     cc.clearRect(0, 0, cW, cH);
-    drawCelebBg(cW, cH);
+    drawCelebBg();
 
     if(isFinalMedal){
       // ── 花火（5秒間） ──
