@@ -593,16 +593,19 @@ let heartX = 0, heartY = -999; // 心臓の中心座標（onload前は-999）
 
 // wave.webp（電離線の代わり）
 const waveImg = new Image();
-waveImg.onload = () => {
-  // dischargeMinX を画像ロード時に一度だけ確定（毎フレーム上書きしない）
-  dischargeMinX = waveImg.naturalWidth * 0.35 * 0.55;
-};
+function _updateDischargeMinX(){
+  if(waveImg.naturalWidth > 0){
+    dischargeMinX = waveImg.naturalWidth * 0.35 * 0.55;
+  }
+}
+waveImg.onload = _updateDischargeMinX;
 waveImg.src = 'discharge.webp';
 waveImg.onerror = () => {
+  waveImg.onload = _updateDischargeMinX;
   waveImg.src = 'discharge.jpg';
-  // fallback画像ロード時も再計算
-  waveImg.onload = () => { dischargeMinX = waveImg.naturalWidth * 0.35 * 0.55; };
 };
+// キャッシュから同期ロードされた場合は onload が発火しないので即チェック
+if(waveImg.complete && waveImg.naturalWidth > 0) _updateDischargeMinX();
 
 // heart.webp（拍動する心臓）
 const heartImg = new Image();
@@ -2248,6 +2251,7 @@ function drawSpotlight(){
 
 
 function initGame(){
+  _updateDischargeMinX(); // waveImg がキャッシュから読まれている場合に備えて再確認
   score=0;level=1;combo=0;stageQCount=0;window._goScheduled=false;
   questionCount = 0; // ST1から開始（テスト：全ステージq:1）
   // HUDを現在のステージに合わせて初期化
@@ -2347,12 +2351,14 @@ function updateGoState(dt){
 
 function onMedalClick(num){
   const earned = localStorage.getItem(`medal${num}`) === '1';
-  if(!earned) return; // 未獲得はタップ不可
+  if(!earned) return;
   overlay.style.display = 'none';
   if(_overlayStarsRaf){ cancelAnimationFrame(_overlayStarsRaf); _overlayStarsRaf=null; }
   const typeMap = {1:'omote',2:'omote',3:'omote',4:'ura',5:'ura',6:'ura',7:'oni',8:'oni',9:'oni'};
-  W = canvas.offsetWidth || 430;
-  H = canvas.offsetHeight || 700;
+  // W/H は game-container ベースで取得（canvas は overlay 後ろで 0 になっている可能性あり）
+  const _gc = document.getElementById('game-container');
+  W = Math.min(_gc.offsetWidth || window.innerWidth, 430);
+  H = Math.max(_gc.offsetHeight, window.innerHeight);
   // クリックで続きのステージから開始
   const cbMap = {
     1: ()=>{ startGameFrom(4);  },   // メダル1→ST4から
@@ -2554,6 +2560,7 @@ function startGameFrom(startSt){
   gameState='paused'; // showStageAnnounce終了時に'playing'に変わる
 
   // initGameの処理を流用しつつ、questionCountを開始ステージ直前に設定
+  _updateDischargeMinX(); // waveImg キャッシュ対応
   score=0; level=1; combo=0; stageQCount=0; window._goScheduled=false;
   updateHUD(startSt);
   levelEl.textContent = startSt === 21 ? '21' : String(startSt);
