@@ -593,8 +593,16 @@ let heartX = 0, heartY = -999; // 心臓の中心座標（onload前は-999）
 
 // wave.webp（電離線の代わり）
 const waveImg = new Image();
+waveImg.onload = () => {
+  // dischargeMinX を画像ロード時に一度だけ確定（毎フレーム上書きしない）
+  dischargeMinX = waveImg.naturalWidth * 0.35 * 0.55;
+};
 waveImg.src = 'discharge.webp';
-waveImg.onerror = () => { waveImg.src = 'discharge.jpg'; };
+waveImg.onerror = () => {
+  waveImg.src = 'discharge.jpg';
+  // fallback画像ロード時も再計算
+  waveImg.onload = () => { dischargeMinX = waveImg.naturalWidth * 0.35 * 0.55; };
+};
 
 // heart.webp（拍動する心臓）
 const heartImg = new Image();
@@ -1206,14 +1214,6 @@ function startCelebration(type, cb, medalNum, btnNum){
   type = type || 'oni';
   gameState = 'celebration';
 
-  // hint-area・control-panel・labelsRowを確実に非表示（canvas外に見えるのを防ぐ）
-  const _ha = document.getElementById('hint-area');
-  if(_ha) _ha.style.display = 'none';
-  const _cp = document.getElementById('control-panel');
-  if(_cp) _cp.style.display = 'none';
-  const _lr = document.getElementById('labels-row');
-  if(_lr) _lr.innerHTML = '';
-
   // gameLoopを停止
   if(frameId){ cancelAnimationFrame(frameId); frameId = null; }
   if(celebFrameId){ cancelAnimationFrame(celebFrameId); celebFrameId = null; }
@@ -1225,10 +1225,10 @@ function startCelebration(type, cb, medalNum, btnNum){
   if(oldBtn) oldBtn.remove();
 
   // ── 専用canvasをgame-container全面に重ねる ──────────────────────────
+  // ※ offsetHeight は要素非表示前に計測する（非表示後は縮んで正確な値が取れない）
   const gc = document.getElementById('game-container');
   const gcW = Math.min(gc.offsetWidth  || window.innerWidth,  430);
-  // game-containerの実際の高さ全体を覆う（control-panel等が下に見えるのを防ぐ）
-  const gcH = gc.offsetHeight || window.innerHeight;
+  const gcH = Math.max(gc.offsetHeight, window.innerHeight);  // 大きい方を使う
   const dpr = window.devicePixelRatio || 1;
 
   const cv = document.createElement('canvas');
@@ -1243,6 +1243,14 @@ function startCelebration(type, cb, medalNum, btnNum){
   cc.imageSmoothingQuality = 'high';
   // cW/cH: ループ外（confetti初期化など）でも使えるよう保持。回転時はresizeCelebCanvasで更新
   let cW = gcW, cH = gcH;
+
+  // canvas作成後に下層要素を非表示（canvasが覆うので透けて見えない）
+  const _ha = document.getElementById('hint-area');
+  if(_ha) _ha.style.display = 'none';
+  const _cp = document.getElementById('control-panel');
+  if(_cp) _cp.style.display = 'none';
+  const _lr = document.getElementById('labels-row');
+  if(_lr) _lr.innerHTML = '';
 
   // 画像
   const mainImg = new Image();
@@ -1917,7 +1925,7 @@ function drawDangerLine(){
     ctx.drawImage(waveImg, -pivotX, -dh/2, dw, dh);
     ctx.restore();
     dischargeOriginX = dw * 0.55;
-    dischargeMinX = dischargeOriginX; // 放電管辺縁を最小値として保持
+    // dischargeMinX はwaveImg.onloadで確定済み（ここで毎フレーム上書きしない）
   }
   const dischargeOriginY = cy;
 
