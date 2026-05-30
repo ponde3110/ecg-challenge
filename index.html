@@ -772,13 +772,24 @@ function resize(){
     currentWave.h     = Math.min(W / ratio2, H * 0.62);
     currentWave.waveX = 0;
     currentWave.y     = 8;
-    const hImgW2 = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 50;
-    heartBaseSize    = hImgW2 / 2;
+    const hImgW2  = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 50;
+    heartBaseSize = hImgW2 / 2;
     const ecgBottom3 = currentWave.y + currentWave.h;
     const ecgRight3  = currentWave.waveX + currentWave.waveW;
-    const areaBelow3 = H - ecgBottom3;
-    heartY = Math.min(ecgBottom3 + Math.max(areaBelow3 * 0.15, 40), H - 60);
+    heartY = ecgBottom3 + heartBaseSize + 12;
     heartX = ecgRight3 - hImgW2 / 2 - 4;
+
+    // canvas高をコンテンツに必要な分だけに圧縮
+    const neededH3 = Math.ceil(heartY + heartBaseSize + 16);
+    if(neededH3 < H){
+      H = neededH3;
+      canvas.width        = Math.round(W * dpr);
+      canvas.height       = Math.round(H * dpr);
+      canvas.style.height = H + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
   }
 }
 resize();
