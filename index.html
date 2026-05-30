@@ -1218,13 +1218,15 @@ function startCelebration(type, cb, medalNum, btnNum){
 
   const cv = document.createElement('canvas');
   cv.id = 'celeb-canvas';
-  cv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;z-index:30;';
+  cv.style.cssText = `position:absolute;top:0;left:0;width:${gcW}px;height:${gcH}px;z-index:30;`;
   cv.width  = Math.round(gcW * dpr);
   cv.height = Math.round(gcH * dpr);
   gc.appendChild(cv);
   const cc = cv.getContext('2d');
   cc.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const cW = gcW, cH = gcH;
+  cc.imageSmoothingEnabled = true;
+  cc.imageSmoothingQuality = 'high';
+  // cW/cH はループ内で cv.style から毎フレーム動的に取得するため定数定義は不要
 
   // 画像
   const mainImg = new Image();
@@ -1328,7 +1330,11 @@ function startCelebration(type, cb, medalNum, btnNum){
     const _dpr = window.devicePixelRatio || 1;
     cv.width  = Math.round(_gcW * _dpr);
     cv.height = Math.round(_gcH * _dpr);
+    cv.style.width  = _gcW + 'px';
+    cv.style.height = _gcH + 'px';
     cc.setTransform(_dpr, 0, 0, _dpr, 0, 0);
+    cc.imageSmoothingEnabled = true;
+    cc.imageSmoothingQuality = 'high';
   }
   window.addEventListener('resize', resizeCelebCanvas);
   if(screen.orientation) screen.orientation.addEventListener('change', ()=>setTimeout(resizeCelebCanvas, 250));
@@ -1388,11 +1394,9 @@ function startCelebration(type, cb, medalNum, btnNum){
   const clearText = _mnum ? (clearTextMap[_mnum] || faceLabel+'クリア！') : faceLabel+'クリア！';
 
   // 星を描画（独立canvas用・drawBgを使わず直接描画）
-  function drawCelebBg(){
-    const _cW = cv.width / (window.devicePixelRatio||1);
-    const _cH = cv.height / (window.devicePixelRatio||1);
+  function drawCelebBg(cW, cH){
     cc.fillStyle = '#000008';
-    cc.fillRect(0, 0, _cW, _cH);
+    cc.fillRect(0, 0, cW, cH);
   }
 
   let celebLastTs = null;
@@ -1402,11 +1406,12 @@ function startCelebration(type, cb, medalNum, btnNum){
     celebLastTs = ts;
     const elapsed = ts - startTs;
     // 回転対応：毎フレーム現在のcanvasサイズを取得
-    const cW = cv.width / (window.devicePixelRatio||1);
-    const cH = cv.height / (window.devicePixelRatio||1);
+    // cv.style.width/height はCSS px 単位で設定されているのでそこから読む
+    const cW = parseFloat(cv.style.width)  || (cv.width  / (window.devicePixelRatio||1));
+    const cH = parseFloat(cv.style.height) || (cv.height / (window.devicePixelRatio||1));
 
     cc.clearRect(0, 0, cW, cH);
-    drawCelebBg();
+    drawCelebBg(cW, cH);
 
     if(isFinalMedal){
       // ── 花火（5秒間） ──
@@ -1508,16 +1513,14 @@ function startCelebration(type, cb, medalNum, btnNum){
     cc.shadowColor='rgba(255,255,255,0.6)'; cc.shadowBlur=10; cc.fillStyle='rgba(255,255,255,0.92)';
     cc.fillText(clearText, cW/2, cH*0.10);
 
+    const medalSize = Math.min(cW*0.55, 220); // 幅＝高さで正円を保証
     const medalY = cH*0.18;
-    if(mainImg.complete && mainImg.naturalWidth>0 && mainImg.naturalHeight>0){
-      const cw2=Math.min(cW*0.55,220);
-      // アスペクト比を必ず naturalWidth/naturalHeight から計算（縦長化防止）
-      const aspectRatio = mainImg.naturalHeight / mainImg.naturalWidth;
-      const ch2 = cw2 * aspectRatio;
-      cc.drawImage(mainImg,(cW-cw2)/2, medalY, cw2, ch2);
+    if(mainImg.complete && mainImg.naturalWidth>0){
+      // 幅・高さを同じ値にすることで、元画像が正方形であれば必ず正円に描画される
+      cc.drawImage(mainImg, (cW-medalSize)/2, medalY, medalSize, medalSize);
     }
 
-    const medalBottom = medalY + Math.min(cW*0.55,220) * 1.05;
+    const medalBottom = medalY + medalSize * 1.05;
     cc.shadowColor='#ffdd00'; cc.shadowBlur=16; cc.fillStyle='#ffee88';
     if(_mnum === 9){
       cc.fillText('ECGチャレンジ完全制覇', cW/2, medalBottom + fs*1.1);
@@ -1564,10 +1567,8 @@ function showStageAnnounce(stage, cb){
     <div style="
       font-size:42px;font-weight:900;
       font-family:'Helvetica Neue','Hiragino Sans',sans-serif;
-      color:transparent;
-      -webkit-text-stroke:2px ${d.color};
-      text-stroke:2px ${d.color};
-      filter:drop-shadow(0 0 18px ${d.color}) drop-shadow(0 0 40px ${d.color});
+      color:${d.color};
+      text-shadow:0 0 18px ${d.color},0 0 40px ${d.color};
       letter-spacing:2px;white-space:nowrap;
       animation:stAnnScale 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
     ">${stageName}</div>
