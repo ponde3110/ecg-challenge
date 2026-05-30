@@ -1244,16 +1244,19 @@ function startCelebration(type, cb, medalNum, btnNum){
 
   const cv = document.createElement('canvas');
   cv.id = 'celeb-canvas';
-  // position:fixed で viewport 全体を確実に覆う
-  cv.style.cssText = `position:fixed;top:0;left:50%;transform:translateX(-50%);width:${gcW}px;height:${gcH}px;z-index:9999;`;
-  cv.width  = Math.round(gcW * dpr);
-  cv.height = Math.round(gcH * dpr);
-  document.body.appendChild(cv);  // game-container ではなく body に追加
+  // canvasをviewport全幅にする（中央寄せの計算ズレを防ぐ）
+  const cvW = window.innerWidth;   // canvas CSS幅 = viewport幅
+  const cvH = window.innerHeight;
+  cv.style.cssText = `position:fixed;top:0;left:0;width:${cvW}px;height:${cvH}px;z-index:9999;`;
+  cv.width  = Math.round(cvW * dpr);
+  cv.height = Math.round(cvH * dpr);
+  document.body.appendChild(cv);
   const cc = cv.getContext('2d');
   cc.setTransform(dpr, 0, 0, dpr, 0, 0);
   cc.imageSmoothingEnabled = true;
   cc.imageSmoothingQuality = 'high';
-  let cW = gcW, cH = gcH;
+  // cW/cH: canvas CSS寸法（描画座標系）
+  let cW = cvW, cH = cvH;
 
   // 画像
   const mainImg = new Image();
@@ -1352,17 +1355,18 @@ function startCelebration(type, cb, medalNum, btnNum){
 
   // 画面回転時にceleb-canvasのサイズを再設定（メダル縦長防止）
   function resizeCelebCanvas(){
-    const _gcW = Math.min(window.innerWidth, 430);
-    const _gcH = window.innerHeight;
+    const _cvW = window.innerWidth;
+    const _cvH = window.innerHeight;
     const _dpr = window.devicePixelRatio || 1;
-    cv.width  = Math.round(_gcW * _dpr);
-    cv.height = Math.round(_gcH * _dpr);
-    cv.style.width  = _gcW + 'px';
-    cv.style.height = _gcH + 'px';
+    cv.width  = Math.round(_cvW * _dpr);
+    cv.height = Math.round(_cvH * _dpr);
+    cv.style.width  = _cvW + 'px';
+    cv.style.height = _cvH + 'px';
+    cv.style.left   = '0px';
     cc.setTransform(_dpr, 0, 0, _dpr, 0, 0);
     cc.imageSmoothingEnabled = true;
     cc.imageSmoothingQuality = 'high';
-    cW = _gcW; cH = _gcH;
+    cW = _cvW; cH = _cvH;
   }
   window.addEventListener('resize', resizeCelebCanvas);
   if(screen.orientation) screen.orientation.addEventListener('change', ()=>setTimeout(resizeCelebCanvas, 250));
@@ -1382,11 +1386,13 @@ function startCelebration(type, cb, medalNum, btnNum){
     btn.id = 'celeb-next-btn';
     btn.src = btnSrc;
     // position:fixed で viewport 基準（canvasと同じ fixed 系に乗せる）
-    btn.style.cssText = `position:fixed;bottom:32px;left:50%;transform:translateX(-50%);width:min(260px,75%);cursor:pointer;z-index:10000;filter:drop-shadow(0 0 12px rgba(0,255,136,0.4));transition:transform .12s,filter .12s;`;
-    btn.addEventListener('mouseover', ()=>{ btn.style.transform='translateX(-50%) scale(1.04)'; btn.style.filter='drop-shadow(0 0 20px rgba(0,255,136,0.55))'; });
-    btn.addEventListener('mouseout',  ()=>{ btn.style.transform='translateX(-50%)';             btn.style.filter='drop-shadow(0 0 12px rgba(0,255,136,0.4))'; });
-    btn.addEventListener('mousedown', ()=>{ btn.style.transform='translateX(-50%) scale(0.97)'; });
-    btn.addEventListener('mouseup',   ()=>{ btn.style.transform='translateX(-50%) scale(1.04)'; });
+    const btnW = Math.min(260, window.innerWidth * 0.75);
+    const btnLeft = Math.floor((window.innerWidth - btnW) / 2);
+    btn.style.cssText = `position:fixed;bottom:32px;left:${btnLeft}px;width:${btnW}px;cursor:pointer;z-index:10000;filter:drop-shadow(0 0 12px rgba(0,255,136,0.4));transition:transform .12s,filter .12s;`;
+    btn.addEventListener('mouseover', ()=>{ btn.style.transform='scale(1.04)'; btn.style.filter='drop-shadow(0 0 20px rgba(0,255,136,0.55))'; });
+    btn.addEventListener('mouseout',  ()=>{ btn.style.transform='';            btn.style.filter='drop-shadow(0 0 12px rgba(0,255,136,0.4))'; });
+    btn.addEventListener('mousedown', ()=>{ btn.style.transform='scale(0.97)'; });
+    btn.addEventListener('mouseup',   ()=>{ btn.style.transform='scale(1.04)'; });
     btn.onclick = () => {
       cleanup();
       if(cb){
@@ -1532,9 +1538,8 @@ function startCelebration(type, cb, medalNum, btnNum){
     const fs = Math.floor(Math.min(cW * 0.06, 28));
     cc.font=`bold ${fs}px "Helvetica Neue","Hiragino Sans","Yu Gothic",sans-serif`;
 
-    // ボタンは bottom:32px fixed（高さ約54px）→ 下部86px はボタン領域
-    // コンテンツはその上のスペースに収める
-    const btnAreaH = 86;
+    // ボタンは bottom:32px fixed（画像高さ約54px）→ 余裕を持って下部100pxをボタン領域とする
+    const btnAreaH = 100;
     const usableH = cH - btnAreaH;
 
     // タイトルテキスト
