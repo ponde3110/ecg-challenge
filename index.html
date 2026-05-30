@@ -1549,7 +1549,7 @@ function startCelebration(type, cb, medalNum, btnNum){
 
     cc.restore();
     // ボタン位置：テキスト下端 + 余白（position:absoluteでcanvasと同じスクロール系）
-    if(elapsed > 2000) showBtn(medalBottom + fs * 2.5);
+    if(elapsed > 2000) showBtn(medalBottom + fs * 5);
     celebFrameId = requestAnimationFrame(loop);
   }
   celebFrameId = requestAnimationFrame(loop);
