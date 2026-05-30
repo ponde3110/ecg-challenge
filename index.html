@@ -755,7 +755,7 @@ function resize(){
     currentWave.h     = ecgH;
     currentWave.waveX = 0;
     currentWave.y     = 8;
-    const hImgW2  = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 50;
+    const hImgW2  = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 100;
     heartBaseSize = hImgW2 / 2;
     const ecgBottom3 = currentWave.y + currentWave.h;
     const ecgRight3  = currentWave.waveX + currentWave.waveW;
@@ -865,13 +865,38 @@ function spawnWave(q, resetDanger=false){
     // 心臓・discharge 座標
     const ecgBottom2 = currentWave.y + currentWave.h;
     const ecgRight2  = currentWave.waveX + currentWave.waveW;
-    const hImgW = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 50;
+    // heartImg がまだ読み込まれていない場合は onload 後に再計算するため暫定値を使用
+    const _hImgW_raw = (heartImg.complete && heartImg.naturalWidth > 0) ? heartImg.naturalWidth * 0.5 : 100;
+    const hImgW = _hImgW_raw;
     heartBaseSize = hImgW / 2;
     heartY = ecgBottom2 + heartBaseSize + 12;   // ← 心電図直下に密着
     heartX = ecgRight2 - hImgW / 2 - 4;
 
     // canvas高 = コンテンツに必要な高さに確定（余白なし）
     H = Math.ceil(heartY + heartBaseSize + 16);
+
+    // heartImg がまだ未ロードなら onload 後に座標を再計算
+    if(!heartImg.complete || heartImg.naturalWidth === 0){
+      const _recalcHeart = () => {
+        if(!currentWave || !currentWave.ready) return;
+        const _hW2 = heartImg.naturalWidth * 0.5;
+        heartBaseSize = _hW2 / 2;
+        const _eb2 = currentWave.y + currentWave.h;
+        const _er2 = currentWave.waveX + currentWave.waveW;
+        heartY = _eb2 + heartBaseSize + 12;
+        heartX = _er2 - _hW2 / 2 - 4;
+        H = Math.ceil(heartY + heartBaseSize + 16);
+        const dpr3 = window.devicePixelRatio || 1;
+        canvas.width  = Math.round(W * dpr3);
+        canvas.height = Math.round(H * dpr3);
+        canvas.style.width  = W + 'px';
+        canvas.style.height = H + 'px';
+        ctx.setTransform(dpr3, 0, 0, dpr3, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+      };
+      heartImg.addEventListener('load', _recalcHeart, { once: true });
+    }
     const dpr2 = window.devicePixelRatio || 1;
     canvas.width        = Math.round(W * dpr2);
     canvas.height       = Math.round(H * dpr2);
@@ -914,6 +939,7 @@ function spawnWave(q, resetDanger=false){
   currentWave={img,waveX:0,waveW:W,y:20,h:80,
     speed:spd, rot, alive:true, ready:false, q};
   answered=false;
+  window._goScheduled = false;
   buildLabels(q);
   updateHUD(getStageDef().st);
   // ヒントパネル更新
@@ -1295,11 +1321,24 @@ function startCelebration(type, cb, medalNum, btnNum){
   let btnShown = false;
   const startTs = performance.now();
 
+  // 画面回転時にceleb-canvasのサイズを再設定（メダル縦長防止）
+  function resizeCelebCanvas(){
+    const _gcW = Math.min(gc.offsetWidth || window.innerWidth, 430);
+    const _gcH = window.innerHeight;
+    const _dpr = window.devicePixelRatio || 1;
+    cv.width  = Math.round(_gcW * _dpr);
+    cv.height = Math.round(_gcH * _dpr);
+    cc.setTransform(_dpr, 0, 0, _dpr, 0, 0);
+  }
+  window.addEventListener('resize', resizeCelebCanvas);
+  if(screen.orientation) screen.orientation.addEventListener('change', ()=>setTimeout(resizeCelebCanvas, 250));
+
   function cleanup(){
     running = false;
     if(celebFrameId){ cancelAnimationFrame(celebFrameId); celebFrameId = null; }
     const c2 = document.getElementById('celeb-canvas'); if(c2) c2.remove();
     const b2 = document.getElementById('celeb-next-btn'); if(b2) b2.remove();
+    window.removeEventListener('resize', resizeCelebCanvas);
   }
 
   function showBtn(){
@@ -1350,8 +1389,10 @@ function startCelebration(type, cb, medalNum, btnNum){
 
   // 星を描画（独立canvas用・drawBgを使わず直接描画）
   function drawCelebBg(){
+    const _cW = cv.width / (window.devicePixelRatio||1);
+    const _cH = cv.height / (window.devicePixelRatio||1);
     cc.fillStyle = '#000008';
-    cc.fillRect(0, 0, cW, cH);
+    cc.fillRect(0, 0, _cW, _cH);
   }
 
   let celebLastTs = null;
@@ -1360,6 +1401,9 @@ function startCelebration(type, cb, medalNum, btnNum){
     const dt2 = celebLastTs !== null ? Math.min(ts - celebLastTs, 32) : 16;
     celebLastTs = ts;
     const elapsed = ts - startTs;
+    // 回転対応：毎フレーム現在のcanvasサイズを取得
+    const cW = cv.width / (window.devicePixelRatio||1);
+    const cH = cv.height / (window.devicePixelRatio||1);
 
     cc.clearRect(0, 0, cW, cH);
     drawCelebBg();
@@ -1465,8 +1509,11 @@ function startCelebration(type, cb, medalNum, btnNum){
     cc.fillText(clearText, cW/2, cH*0.10);
 
     const medalY = cH*0.18;
-    if(mainImg.complete && mainImg.naturalWidth>0){
-      const cw2=Math.min(cW*0.55,220), ch2=cw2*(mainImg.naturalHeight/mainImg.naturalWidth);
+    if(mainImg.complete && mainImg.naturalWidth>0 && mainImg.naturalHeight>0){
+      const cw2=Math.min(cW*0.55,220);
+      // アスペクト比を必ず naturalWidth/naturalHeight から計算（縦長化防止）
+      const aspectRatio = mainImg.naturalHeight / mainImg.naturalWidth;
+      const ch2 = cw2 * aspectRatio;
       cc.drawImage(mainImg,(cW-cw2)/2, medalY, cw2, ch2);
     }
 
@@ -1589,9 +1636,11 @@ function onWrong(lbl){
     if(slimes.length > 0) _savedSlimes = slimes.map(s=>({...s}));
     if(currentWave) currentWave.alive=false;
     if(goOver){
-      setTimeout(()=>gameOver(), 300);
+      setTimeout(()=>{
+        if(gameState !== 'gameover') gameOver();
+      }, 300);
     } else {
-      spawnWave(pickQuestion(), false);
+      if(gameState === 'playing') spawnWave(pickQuestion(), false);
     }
   }, 4000);
 }
