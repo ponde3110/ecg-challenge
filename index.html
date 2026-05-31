@@ -481,8 +481,8 @@ const QUESTIONS_RAW = [
   {img:'ecg/29.jpg',answer:'QT延長',choices:['ST低下','QT延長','1度房室ブロック','陰性T波'],hint:'TがRRの概ね半分以上',bpm:65},
   {img: 'ecg/30.jpg', answer: '洞不全',       choices: ['ウェンケバッハ型（2度）房室ブロック', '徐脈性心房細動（slow AF）', '洞不全', '3度房室ブロック'],hint: '洞機能低下による徐脈',bpm:38},
   
-  {img:'ecg/31.jpg',answer:'房室ペーシング＋前壁の急性梗塞（AMI）',choices:['房室ペーシング＋前壁の陳旧性梗塞（OMI）','房室ペーシング＋下壁の急性梗塞（AMI）','房室ペーシング＋下壁の陳旧性梗塞（OMI）','房室ペーシング＋前壁の急性梗塞（AMI）'],hint:'PとQRSの前にスパイク',bpm:54},
-  {img:'ecg/32.jpg',answer:'巨大陰性T波',choices:['ST低下','左脚ブロック','右脚ブロック','巨大陰性T波'],hint:'心尖部肥大型心筋症で多い',bpm:68},
+  {img:'ecg/31.jpg',answer:'房室ペーシング＋前壁の急性梗塞（AMI）',choices:['房室ペーシング＋前壁の陳旧性梗塞（OMI）','房室ペーシング＋下壁の急性梗塞（AMI）','房室ペーシング＋下壁の陳旧性梗塞（OMI）','房室ペーシング＋前壁の急性梗塞（AMI）'],hint:'V4でQRSとSTの向きが同じ',bpm:54},
+  {img:'ecg/32.jpg',answer:'巨大陰性T波',choices:['増高T波','左脚ブロック','右脚ブロック','巨大陰性T波'],hint:'心尖部肥大型心筋症で多い',bpm:68},
   {img:'ecg/33.jpg',answer:'前側壁の急性梗塞（AMI）',choices:['下壁の急性梗塞（AMI）','前壁の急性梗塞（AMI）','側壁の急性梗塞（AMI）','前側壁の急性梗塞（AMI）'],hint:'ⅠとaVLにもST上昇あり',bpm:88},
   {img:'ecg/34.jpg',answer:'上室期外収縮（PAC）2連発',choices:['上室期外収縮（PAC）2連発','心室期外収縮（PVC）2連発','発作性上室頻拍（PSVT）','心房細動（AF）'],hint:'幅狭QRSの連発',bpm:72},
   {img:'ecg/35.jpg',answer:'右房拡大',choices:['右房拡大','左房拡大','左室肥大','右室肥大'],hint:'下壁誘導でP＞2.5mm',bpm:75},
@@ -512,7 +512,7 @@ const QUESTIONS_RAW = [
   {img:'ecg/59.jpg',answer:'2：1伝導の心房粗動（AFL）',choices:['2：1伝導の心房粗動（AFL）','頻脈性心房細動（rapid AF）','発作性上室頻拍（PSVT）','洞頻脈'],hint:'下壁誘導のノコギリ波形',bpm:150},
   {img:'ecg/60.jpg',answer:'左脚ブロック＋心房細動（AF）',choices:['左脚ブロック＋心房細動（AF）','心室頻拍（VT）','心室細動（VF）','左脚ブロック＋心房粗動（AFL）'],hint:'Pなく絶対不整',bpm:130},
   {img:'ecg/61.jpg',answer:'心房粗動（AFL）＋心室ペーシング',choices:['心房粗動（AFL）＋心室ペーシング','心房粗動（AFL）＋心房ペーシング','心房細動（AF）＋心室ペーシング','心房細動（AF）＋心房ペーシング'],hint:'ノコギリ波形＋QRS直前のスパイク',bpm:70},
-  {img:'ecg/62.jpg',answer:'心室頻拍＋胸部誘導の低電位差',choices:['心室頻拍＋胸部誘導の低電位差','心室細動（VF）＋胸部誘導の低電位差','頻脈性心房細動（rapid AF）＋胸部誘導の低電位差','発作性上室頻拍（PSVT）＋胸部誘導の低電位差'],hint:'全胸部誘導でQRS振幅＜10mm',bpm:160},
+  {img:'ecg/62.jpg',answer:'心室頻拍（VT）＋胸部誘導の低電位差',choices:['心室頻拍（VT）＋胸部誘導の低電位差','心室細動（VF）＋胸部誘導の低電位差','心房細動（AF）＋胸部誘導の低電位差','発作性上室頻拍（PSVT）＋胸部誘導の低電位差'],hint:'全胸部誘導でQRS振幅＜10mm',bpm:160},
   {img:'ecg/63.jpg',answer:'3度房室ブロック＋QT延長',choices:['3度房室ブロック＋QT延長','1度房室ブロック＋QT延長','高度房室ブロック＋QT延長','2度房室ブロック＋QT延長'],hint:'PとQRSの関係に注目',bpm:38},
   {img:'ecg/64.jpg',answer:'平低T波',choices:['平低T波','陰性T波','増高T波','二相性T波'],hint:'全Tの振幅が1mm未満',bpm:72},
   {img:'ecg/65.jpg',answer:'発症早期の前壁の急性梗塞（AMI）',choices:['発症早期の前壁の急性梗塞（AMI）','前壁の陳旧性梗塞（OMI）','発症翌々日の前壁の急性梗塞（AMI）','発症翌日の前壁の急性梗塞（AMI）'],hint:'本例は直後に心室細動（VF）',bpm:90},
@@ -523,7 +523,7 @@ const QUESTIONS_RAW = [
   {img:'ecg/70.jpg',answer:'洞停止＋増高T波',choices:['洞停止＋増高T波','洞停止＋平低T波','洞停止＋陰性T波','洞停止＋二相性T波'],hint:'本例の血中Kは8.4 mEq/L',bpm:40},
   {img:'ecg/71.jpg',answer:'心膜炎',choices:['心膜炎','前壁の急性梗塞（AMI）','早期再分極','下壁の急性梗塞（AMI）'],hint:'PQの低下にも注目',bpm:95},
   {img:'ecg/72.jpg',answer:'右室肥大',choices:['右室肥大','左室肥大','両室肥大','正常'],hint:'本例は肺血栓塞栓症',bpm:110},
-  {img:'ecg/73.jpg',answer:'肢誘導のつけ間違い',choices:['肢誘導のつけ間違い','全誘導のつけ間違い','誘導のつけ間違いはない','胸部誘導のつけ間違い'],hint:'陰性Ⅰと陽性aVRなら肢誘導のミスを疑う',bpm:72},
+  {img:'ecg/73.jpg',answer:'肢誘導のつけ間違い',choices:['肢誘導のつけ間違い','全誘導のつけ間違い','誘導のつけ間違いはない','胸部誘導のつけ間違い'],hint:'陰性Ⅰと陽性aVRを見たら…',bpm:72},
   {img:'ecg/74.jpg',answer:'心室二段脈＋前壁の陳旧性梗塞（OMI）',choices:['心室二段脈＋前壁の陳旧性梗塞（OMI）','心室二段脈＋下壁の陳旧性梗塞（OMI）','心室二段脈＋側壁の陳旧性梗塞（OMI）','心室二段脈＋後壁の陳旧性梗塞（OMI）'],hint:'自己波と期外収縮を分けて診断',bpm:75},
   {img:'ecg/75.jpg',answer:'左房拡大＋左室肥大',choices:['左房拡大＋左室肥大','左房拡大＋右室肥大','右房拡大＋左室肥大','右房拡大＋右室肥大'],hint:'V1の陰性Pに注目',bpm:72},
   {img:'ecg/76.jpg',answer:'右胸心',choices:['右胸心','正中心','左胸心（正常）','異位心'],hint:'本例は完全内臓逆位',bpm:72},
@@ -537,12 +537,12 @@ const QUESTIONS_RAW = [
   {img:'ecg/84.jpg',answer:'発作性の心房細動（AF）',choices:['発作性の心房細動（AF）','持続性の心房細動（AF）','永続性の心房細動（AF）','心房粗動（AFL）'],hint:'心房期外収縮（PAC）がトリガー',bpm:130},
   {img:'ecg/85.jpg',answer:'後壁の急性梗塞（AMI）',choices:['後壁の急性梗塞（AMI）','前壁の急性梗塞（AMI）','下壁の急性梗塞（AMI）','側壁の急性梗塞（AMI）'],hint:'V1-3波形を上下反転',bpm:75},
   {img:'ecg/86.jpg',answer:'トルサード・ド・ポアント',choices:['トルサード・ド・ポアント','心室細動（VF）','心室頻拍（VT）','偽性心室頻拍（俗称）'],hint:'QT延長を伴い自然停止',bpm:220},
-  {img:'ecg/87.jpg',answer:'心室粗動',choices:['心室粗動','心室細動（VF）','心室頻拍（VT）','トルサード・ド・ポアント'],hint:'通常、心室頻拍（VT）は120～250回／分',bpm:300},
+  {img:'ecg/87.jpg',answer:'心室粗動',choices:['心室粗動','心室細動（VF）','心室頻拍（VT）','トルサード・ド・ポアント'],hint:'心室頻拍（VT）は120～250回／分',bpm:300},
   {img:'ecg/88.jpg',answer:'後壁の陳旧性梗塞（OMI）',choices:['後壁の陳旧性梗塞（OMI）','下壁の陳旧性梗塞（OMI）','側壁の陳旧性梗塞（OMI）','前壁の陳旧性梗塞（OMI）'],hint:'V1-2の高いRとT増高',bpm:72},
   {img:'ecg/89.jpg',answer:'WPW症候群',choices:['WPW症候群','左脚ブロック','心室期外収縮（PVC）','LGL症候群'],hint:'不顕性から顕性へ変化',bpm:78},
   {img:'ecg/90.jpg',answer:'移動性ペースメーカ',choices:['移動性ペースメーカ','多源性心房頻拍（MAT）','心房期外収縮（PAC）','洞不整脈'],hint:'Ⅱ誘導のPの形が変化',bpm:65},
   {img:'ecg/91.jpg',answer:'房室解離',choices:['房室解離','3度房室ブロック','促進心室調律','高度房室ブロック'],hint:'QRSがPを追い越している',bpm:72},
-  {img:'ecg/92.jpg',answer:'下壁の急性梗塞（AMI）＋心房細動＋3度房室ブロック',choices:['下壁の急性梗塞（AMI）＋心房細動＋3度房室ブロック','下壁の急性梗塞（AMI）＋心房細動＋2度房室ブロック','下壁の急性梗塞（AMI）＋心房細動＋1度房室ブロック','下壁の急性梗塞（AMI）＋心房細動＋高度房室ブロック'],hint:'意外によくある組合せ',bpm:38},
+  {img:'ecg/92.jpg',answer:'下壁の急性梗塞（AMI）＋心房細動＋3度ブロック',choices:['下壁の急性梗塞（AMI）＋心房細動＋3度ブロック','下壁の急性梗塞（AMI）＋心房細動＋2度ブロック','下壁の急性梗塞（AMI）＋心房細動＋1度ブロック','下壁の急性梗塞（AMI）＋心房細動＋高度ブロック'],hint:'意外によくある組合せ',bpm:38},
   {img:'ecg/93.jpg',answer:'冠静脈洞調律',choices:['冠静脈洞調律','多源性心房頻拍（MAT）','移動性ペースメーカ','正常洞調律'],hint:'下壁誘導で陰性P',bpm:55},
   {img:'ecg/94.jpg',answer:'前側壁の急性梗塞（AMI）＋右脚ブロック',choices:['前側壁の急性梗塞（AMI）＋右脚ブロック','前壁の急性梗塞（AMI）＋右脚ブロック','側壁の急性梗塞（AMI）＋右脚ブロック','下壁の急性梗塞（AMI）＋右脚ブロック'],hint:'右脚ブロックに惑わされない',bpm:88},
   {img:'ecg/95.jpg',answer:'前壁と下壁の陳旧性梗塞（OMI）',choices:['前壁と下壁の陳旧性梗塞（OMI）','前壁と側壁の陳旧性梗塞（OMI）','前壁と後壁の陳旧性梗塞（OMI）','前壁と下壁の急性梗塞（AMI）'],hint:'下壁誘導は意識しないと見落とす',bpm:68},
@@ -2640,6 +2640,9 @@ let currentHintContent = '';
     if(!w.img.complete || w.img.naturalWidth===0) return;
 
     const cx = lensX, cy = lensY;
+    // 虫眼鏡の表示中心をタッチ位置より上にオフセット（タッチ点がレンズ内・中心と最下点の中間に来る）
+    const DISPLAY_OFFSET_Y = LENS_R * 0.5;
+    const dispCx = cx, dispCy = cy - DISPLAY_OFFSET_Y;
     const dpr = window.devicePixelRatio || 1;
 
     // ── ハイブリッド方式 ──────────────────────────────────────────────
@@ -2651,8 +2654,7 @@ let currentHintContent = '';
     const imgScaleX = w.img.naturalWidth  / w.waveW;
     const imgScaleY = w.img.naturalHeight / w.h;
 
-    // タッチ位置の元画像上の対応ピクセル
-    // 反転面では切り出し座標も反転（動きを合わせるため）
+    // タッチ位置（cx/cy）の元画像上の対応ピクセルを拡大中心とする
     let relX = (cx - w.waveX) / w.waveW;
     let relY = (cy - w.y)     / w.h;
     if(w.rot){ relX = 1 - relX; relY = 1 - relY; }
@@ -2669,27 +2671,28 @@ let currentHintContent = '';
     const sw = sx2 - sx, sh = sy2 - sy;
     const dw = sw / imgScaleX * ZOOM;
     const dh = sh / imgScaleY * ZOOM;
-    const dx = cx - (imgCx - sx) / imgScaleX * ZOOM;
-    const dy = cy - (imgCy - sy) / imgScaleY * ZOOM;
+    // 描画先: 表示中心(dispCx/dispCy)を基準にオフセット
+    const dx = dispCx - (imgCx - sx) / imgScaleX * ZOOM;
+    const dy = dispCy - (imgCy - sy) / imgScaleY * ZOOM;
 
     ctx.save();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // 円クリップ
+    // 円クリップ（表示位置 = dispCx/dispCy）
     ctx.beginPath();
-    ctx.arc(cx, cy, LENS_R, 0, Math.PI*2);
+    ctx.arc(dispCx, dispCy, LENS_R, 0, Math.PI*2);
     ctx.clip();
 
     // ── レイヤー1: 元画像から高画質で直接描画 ──
     ctx.fillStyle = '#000008';
     ctx.fill(); // 背景黒
     if(w.rot){
-      // 反転面: レンズ中心(cx,cy)を軸に180度回転して描画
+      // 反転面: レンズ中心(dispCx,dispCy)を軸に180度回転して描画
       ctx.save();
-      ctx.translate(cx, cy);
+      ctx.translate(dispCx, dispCy);
       ctx.rotate(Math.PI);
-      ctx.translate(-cx, -cy);
+      ctx.translate(-dispCx, -dispCy);
       ctx.drawImage(w.img, sx, sy, sw, sh, dx, dy, dw, dh);
       ctx.restore();
     } else {
@@ -2700,14 +2703,13 @@ let currentHintContent = '';
     // 心電図ピクセルは上書きせず、エフェクトのみを正確に重ねる
     if(stageEffects && stageEffects.spotlight && spotlight){
       // スポットライトの暗闇をレンズ内座標で再描画
-      // （元画像の高画質描画の上に暗闇だけを乗せる）
-      const spCx = cx + (spotlight.x - cx) * ZOOM;
-      const spCy = cy + (spotlight.y - cy) * ZOOM;
+      const spCx = dispCx + (spotlight.x - cx) * ZOOM;
+      const spCy = dispCy + (spotlight.y - cy) * ZOOM;
       const spR  = spotlight.r * ZOOM;
 
       // 暗闇レイヤー（心電図エリアをZOOM倍座標で覆う）
-      const darkX = cx + (w.waveX - cx) * ZOOM;
-      const darkY = cy + (w.y - cy) * ZOOM;
+      const darkX = dispCx + (w.waveX - cx) * ZOOM;
+      const darkY = dispCy + (w.y - cy) * ZOOM;
       const darkW = w.waveW * ZOOM;
       const darkH = w.h * ZOOM;
 
@@ -2737,7 +2739,7 @@ let currentHintContent = '';
 
       // 3) 心電図エリアのみにクリップして暗闇を合成
       ctx.drawImage(tmpC, 0, 0, LENS_R*2, LENS_R*2,
-                    cx-LENS_R, cy-LENS_R, LENS_R*2, LENS_R*2);
+                    dispCx-LENS_R, dispCy-LENS_R, LENS_R*2, LENS_R*2);
     }
 
     // スライム: 画像を直接ZOOM倍で描画（高画質・スナップ不使用）
@@ -2747,10 +2749,10 @@ let currentHintContent = '';
         if(Math.abs(sl.y - cy) > LENS_R/ZOOM + sl.w*1.5) continue;
         const slImg = SLIME_IMGS[sl.key];
         if(!slImg || !slImg.complete || slImg.naturalWidth===0) continue;
-        const slCx = cx + (sl.x - cx) * ZOOM;
-        const slCy = cy + (sl.y - cy) * ZOOM;
+        // スライム表示位置もdispCx/dispCy基準にオフセット
+        const slCx = dispCx + (sl.x - cx) * ZOOM;
+        const slCy = dispCy + (sl.y - cy) * ZOOM;
         const slW  = sl.w * ZOOM;
-        // wobbleスケールも反映
         const scX = 1 + Math.sin(sl.wobble) * 0.08;
         const scY = 1 - Math.sin(sl.wobble) * 0.06;
         ctx.save();
@@ -2766,18 +2768,18 @@ let currentHintContent = '';
     ctx.restore();
 
     // 枠（グラデーション）
-    const grad = ctx.createRadialGradient(cx, cy, LENS_R - BORDER*3, cx, cy, LENS_R + BORDER);
+    const grad = ctx.createRadialGradient(dispCx, dispCy, LENS_R - BORDER*3, dispCx, dispCy, LENS_R + BORDER);
     grad.addColorStop(0, 'rgba(200,230,255,0.95)');
     grad.addColorStop(1, 'rgba(60,140,255,0.3)');
     ctx.beginPath();
-    ctx.arc(cx, cy, LENS_R, 0, Math.PI*2);
+    ctx.arc(dispCx, dispCy, LENS_R, 0, Math.PI*2);
     ctx.strokeStyle = grad;
     ctx.lineWidth = BORDER * 2;
     ctx.stroke();
 
     // ハイライト（レンズ感）
     ctx.beginPath();
-    ctx.arc(cx - LENS_R*0.25, cy - LENS_R*0.3, LENS_R*0.25, 0, Math.PI*2);
+    ctx.arc(dispCx - LENS_R*0.25, dispCy - LENS_R*0.3, LENS_R*0.25, 0, Math.PI*2);
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.fill();
   }
