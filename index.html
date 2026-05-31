@@ -375,6 +375,29 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
 
 </div>
 <script>
+// ===== 一時デバッグ：iPadでのエラーを画面に表示 =====
+window.addEventListener('error', function(e){
+  let box = document.getElementById('__errbox');
+  if(!box){
+    box = document.createElement('div');
+    box.id = '__errbox';
+    box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(200,0,0,0.95);color:#fff;font:12px monospace;padding:8px;white-space:pre-wrap;max-height:50vh;overflow:auto;';
+    document.body.appendChild(box);
+  }
+  box.textContent += `ERROR: ${e.message}\n  at ${e.filename}:${e.lineno}:${e.colno}\n`;
+});
+window.addEventListener('unhandledrejection', function(e){
+  let box = document.getElementById('__errbox');
+  if(!box){
+    box = document.createElement('div');
+    box.id = '__errbox';
+    box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(200,0,0,0.95);color:#fff;font:12px monospace;padding:8px;white-space:pre-wrap;max-height:50vh;overflow:auto;';
+    document.body.appendChild(box);
+  }
+  box.textContent += `PROMISE REJECT: ${e.reason}\n`;
+});
+// ===== デバッグここまで =====
+
 // ヒント非表示レベル閾値
 const HINT_HIDE_LEVEL = 3;
 
@@ -749,7 +772,13 @@ const overlay      = document.getElementById('overlay');
 function resize(){
   const dpr = window.devicePixelRatio || 1;
 
-  W = ecgArea.offsetWidth || window.innerWidth;
+  // ecgArea.offsetWidth が 0/未確定の場合のフォールバックを強化（iPad対策）
+  let _w = ecgArea.offsetWidth;
+  if(!_w || _w < 50){
+    const _gc = document.getElementById('game-container');
+    _w = (_gc && _gc.offsetWidth) ? _gc.offsetWidth : Math.min(window.innerWidth, 430);
+  }
+  W = _w;
 
   // H はこの時点では「十分大きな仮値」として設定し、
   // currentWave がある場合は画像比率から正確に計算し直す
@@ -2217,32 +2246,37 @@ function drawSpotlight(){
 
   // オフスクリーンcanvasを一切使わず、メインcanvasに直接描画する
   // （iOS Safari のオフスクリーンcanvas枯渇問題を根絶）
+  // clip('evenodd') は一部のiOS Safariで不安定なため、
+  // 外側矩形(時計回り)＋内側円(反時計回り)のサブパスで穴を空ける（nonzeroルール）
   ctx.save();
 
-  // 心電図エリアの矩形をクリップ領域に設定
   ctx.beginPath();
-  ctx.rect(0, top, W, bot - top);
+  // 外側の矩形（時計回り）
+  ctx.moveTo(0, top);
+  ctx.lineTo(W, top);
+  ctx.lineTo(W, bot);
+  ctx.lineTo(0, bot);
+  ctx.closePath();
+  // 内側の円（反時計回り）→ nonzeroルールで穴になる
+  ctx.moveTo(x + r, y);
+  ctx.arc(x, y, r, 0, Math.PI*2, true);
+  ctx.closePath();
   ctx.clip();
 
-  // 暗闇全体を塗る → その上にスポット穴をradialで「明るく戻す」のではなく、
-  // 穴の外側だけを暗く塗るために even-odd クリップを使う
-  // 1) 矩形全体 + スポット円（穴）の even-odd パスでクリップ
-  ctx.beginPath();
-  ctx.rect(0, top, W, bot - top);          // 外側の矩形
-  ctx.arc(x, y, r, 0, Math.PI*2);          // 内側の円（穴）
-  ctx.clip('evenodd');                      // 矩形から円を除いた領域だけにクリップ
-
-  // 2) その領域を暗闇で塗る（穴の部分は塗られない）
+  // 暗闇を塗る（穴の部分は塗られない）
   ctx.fillStyle = 'rgba(0,0,0,0.93)';
   ctx.fillRect(0, top, W, bot - top);
 
   ctx.restore();
 
   // 3) 穴の縁を radial グラデーションで自然にぼかす
-  //    （穴の境界が硬くならないよう、円周付近に半透明の暗闇リングを描く）
   ctx.save();
   ctx.beginPath();
-  ctx.rect(0, top, W, bot - top);
+  ctx.moveTo(0, top);
+  ctx.lineTo(W, top);
+  ctx.lineTo(W, bot);
+  ctx.lineTo(0, bot);
+  ctx.closePath();
   ctx.clip();
   const gEdge = ctx.createRadialGradient(x, y, r*0.72, x, y, r);
   gEdge.addColorStop(0,    'rgba(0,0,0,0)');
@@ -2255,14 +2289,7 @@ function drawSpotlight(){
   ctx.fill();
   ctx.restore();
 
-  // 4) 上端・下端の暗闇の境界をグラデーションでフェード
-  ctx.save();
-  const gTop = ctx.createLinearGradient(0, top, 0, y0 + 6);
-  gTop.addColorStop(0, 'rgba(0,0,0,0)');
-  gTop.addColorStop(1, 'rgba(0,0,0,0.0)'); // 上端フェード（穴と干渉しないよう薄く）
-  ctx.restore();
-
-  // 5) スポット縁のグロー（温かみのある光輪）
+  // 4) スポット縁のグロー（温かみのある光輪）
   ctx.save();
   const gGlow = ctx.createRadialGradient(x,y,r*0.75, x,y,r*1.2);
   gGlow.addColorStop(0,   'rgba(255,220,120,0)');
