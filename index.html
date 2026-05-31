@@ -1647,8 +1647,8 @@ function showStageAnnounce(stage, cb){
     _stageAnnEl = null;
     gameState = 'playing';
     // UI/HUDを再表示してからゲーム開始
-    if(_annUiEl) _annUiEl.style.display = '';
-    if(_annCpEl) _annCpEl.style.display = '';
+    if(_annUiEl){ _annUiEl.style.display = ''; _annUiEl.style.visibility = ''; }
+    if(_annCpEl){ _annCpEl.style.display = ''; _annCpEl.style.visibility = ''; }
     cb();
     if(!frameId){ lastTime=performance.now(); frameId=requestAnimationFrame(gameLoop); }
   }, 2600);
@@ -2334,11 +2334,14 @@ function gameOver(){
   // 不要な要素を即クリア・非表示
   labelsRow.innerHTML='';
   hintArea.classList.add('hidden');
+  // ※ display:none ではなく visibility:hidden を使う。
+  //   display:none は game-container(flex) の高さを変えて reflow を起こし、
+  //   ecgArea のサイズ→W/H/heartX/heartY が変わって放電管・心臓の位置がずれるため。
   const cp = document.getElementById('control-panel');
-  if(cp) cp.style.display = 'none';
+  if(cp) cp.style.visibility = 'hidden';
   // HUDを非表示
   const uiGoEl = document.getElementById('ui');
-  if(uiGoEl) uiGoEl.style.display = 'none';
+  if(uiGoEl) uiGoEl.style.visibility = 'hidden';
   slimes = [];
   spotlight = null;
   particles_arr = [];
@@ -2434,9 +2437,9 @@ function applyMedalState(){
 
 function returnToTop(){
   const cp = document.getElementById('control-panel');
-  if(cp) cp.style.display = '';
+  if(cp){ cp.style.display = ''; cp.style.visibility = ''; }
   const uiEl = document.getElementById('ui');
-  if(uiEl) uiEl.style.display = '';
+  if(uiEl){ uiEl.style.display = ''; uiEl.style.visibility = ''; }
   overlay.innerHTML = _topOverlayHTML;
   overlay.style.display = 'flex';
   startOverlayStars();
