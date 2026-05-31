@@ -591,11 +591,6 @@ let dischargeMinX = 0;    // 放電管辺縁（最小値）
 let heartBaseSize = 80;
 let heartX = 0, heartY = -999; // 心臓の中心座標（onload前は-999）
 
-// スポットライト用オフスクリーンcanvas（一度だけ生成して使い回す）
-// 毎フレームnewすると iOS Safari のcanvas上限に達してメインcanvasが壊れる
-const _spotOc  = document.createElement('canvas');
-const _spotOc2 = _spotOc.getContext('2d');
-
 // wave.webp（電離線の代わり）
 const waveImg = new Image();
 function _updateDischargeMinX(){
@@ -1250,8 +1245,6 @@ function startCelebration(type, cb, medalNum, btnNum){
   if(_lr2) _lr2.innerHTML = '';
 
   // ── 専用canvas を body 直下に fixed で配置（game-container の高さに依存しない）──
-  const gcW = Math.min(window.innerWidth, 430);
-  const gcH = window.innerHeight;
   const dpr = window.devicePixelRatio || 1;
 
   const cv = document.createElement('canvas');
@@ -1259,7 +1252,8 @@ function startCelebration(type, cb, medalNum, btnNum){
   // canvasをviewport全幅にする（中央寄せの計算ズレを防ぐ）
   const cvW = window.innerWidth;   // canvas CSS幅 = viewport幅
   const cvH = window.innerHeight;
-  cv.style.cssText = `position:fixed;top:0;left:0;width:${cvW}px;height:${cvH}px;z-index:9999;`;
+  // 黒背景を最初から塗っておく（画像ロード待ちでも真っ黒にならず確実に見える）
+  cv.style.cssText = `position:fixed;top:0;left:0;width:${cvW}px;height:${cvH}px;z-index:9999;background:#000008;`;
   cv.width  = Math.round(cvW * dpr);
   cv.height = Math.round(cvH * dpr);
   document.body.appendChild(cv);
@@ -2217,50 +2211,58 @@ function drawSpotlight(){
   const {x, y, r} = spotlight;
   const y0 = currentWave.y;
   const wh = currentWave.h;
-
-  // オフスクリーンcanvasを使い回す（毎フレームnewするとiOS Safariのcanvas上限に達する）
-  if(_spotOc.width !== W || _spotOc.height !== H){
-    _spotOc.width  = W;
-    _spotOc.height = H;
-    // サイズ変更時もcontextのstateはリセットされないので明示的に戻す
-  }
-  // compositeOperationを必ずsource-overに戻してから完全クリア
-  _spotOc2.globalCompositeOperation = 'source-over';
-  _spotOc2.clearRect(0, 0, W, H);
-
-  // 1) 暗闇で全体を塗りつぶす（上下を少し広げてエッジを消す）
   const pad = 20;
-  _spotOc2.globalCompositeOperation = 'source-over';
-  _spotOc2.fillStyle = 'rgba(0,0,0,0.93)';
-  _spotOc2.fillRect(0, y0 - pad, W, wh + pad*2);
-  // 上端・下端をグラデーションでフェードアウトさせて境界線を消す
-  const gTop = _spotOc2.createLinearGradient(0, y0 - pad, 0, y0 + 6);
+  const top = y0 - pad;
+  const bot = y0 + wh + pad;
+
+  // オフスクリーンcanvasを一切使わず、メインcanvasに直接描画する
+  // （iOS Safari のオフスクリーンcanvas枯渇問題を根絶）
+  ctx.save();
+
+  // 心電図エリアの矩形をクリップ領域に設定
+  ctx.beginPath();
+  ctx.rect(0, top, W, bot - top);
+  ctx.clip();
+
+  // 暗闇全体を塗る → その上にスポット穴をradialで「明るく戻す」のではなく、
+  // 穴の外側だけを暗く塗るために even-odd クリップを使う
+  // 1) 矩形全体 + スポット円（穴）の even-odd パスでクリップ
+  ctx.beginPath();
+  ctx.rect(0, top, W, bot - top);          // 外側の矩形
+  ctx.arc(x, y, r, 0, Math.PI*2);          // 内側の円（穴）
+  ctx.clip('evenodd');                      // 矩形から円を除いた領域だけにクリップ
+
+  // 2) その領域を暗闇で塗る（穴の部分は塗られない）
+  ctx.fillStyle = 'rgba(0,0,0,0.93)';
+  ctx.fillRect(0, top, W, bot - top);
+
+  ctx.restore();
+
+  // 3) 穴の縁を radial グラデーションで自然にぼかす
+  //    （穴の境界が硬くならないよう、円周付近に半透明の暗闇リングを描く）
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, top, W, bot - top);
+  ctx.clip();
+  const gEdge = ctx.createRadialGradient(x, y, r*0.72, x, y, r);
+  gEdge.addColorStop(0,    'rgba(0,0,0,0)');
+  gEdge.addColorStop(0.55, 'rgba(0,0,0,0)');
+  gEdge.addColorStop(0.8,  'rgba(0,0,0,0.55)');
+  gEdge.addColorStop(1,    'rgba(0,0,0,0.93)');
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI*2);
+  ctx.fillStyle = gEdge;
+  ctx.fill();
+  ctx.restore();
+
+  // 4) 上端・下端の暗闇の境界をグラデーションでフェード
+  ctx.save();
+  const gTop = ctx.createLinearGradient(0, top, 0, y0 + 6);
   gTop.addColorStop(0, 'rgba(0,0,0,0)');
-  gTop.addColorStop(1, 'rgba(0,0,0,0.93)');
-  _spotOc2.fillStyle = gTop;
-  _spotOc2.fillRect(0, y0 - pad, W, pad + 6);
-  const gBot = _spotOc2.createLinearGradient(0, y0 + wh - 6, 0, y0 + wh + pad);
-  gBot.addColorStop(0, 'rgba(0,0,0,0.93)');
-  gBot.addColorStop(1, 'rgba(0,0,0,0)');
-  _spotOc2.fillStyle = gBot;
-  _spotOc2.fillRect(0, y0 + wh - 6, W, pad + 6);
+  gTop.addColorStop(1, 'rgba(0,0,0,0.0)'); // 上端フェード（穴と干渉しないよう薄く）
+  ctx.restore();
 
-  // 2) スポット部分を destination-out で透明に抜く
-  _spotOc2.globalCompositeOperation = 'destination-out';
-  const gSpot = _spotOc2.createRadialGradient(x,y,0, x,y,r);
-  gSpot.addColorStop(0,    'rgba(0,0,0,1)');
-  gSpot.addColorStop(0.6,  'rgba(0,0,0,0.85)');
-  gSpot.addColorStop(0.85, 'rgba(0,0,0,0.3)');
-  gSpot.addColorStop(1,    'rgba(0,0,0,0)');
-  _spotOc2.beginPath();
-  _spotOc2.arc(x, y, r, 0, Math.PI*2);
-  _spotOc2.fillStyle = gSpot;
-  _spotOc2.fill();
-
-  // 3) 本体canvasに重ねる
-  ctx.drawImage(_spotOc, 0, 0);
-
-  // 4) スポット縁のグロー（温かみのある光輪）
+  // 5) スポット縁のグロー（温かみのある光輪）
   ctx.save();
   const gGlow = ctx.createRadialGradient(x,y,r*0.75, x,y,r*1.2);
   gGlow.addColorStop(0,   'rgba(255,220,120,0)');
@@ -2811,9 +2813,13 @@ let currentHintContent = '';
     const hasEffects = stageEffects && (stageEffects.spotlight || stageEffects.slime);
     if(hasEffects){
       // エフェクトありの場合のみスナップショットを取る
-      snapCanvas.width  = canvas.width;
-      snapCanvas.height = canvas.height;
+      // canvas.width への代入はサイズが変わった時だけ（毎フレーム代入はcanvas全再確保でコスト大）
+      if(snapCanvas.width !== canvas.width || snapCanvas.height !== canvas.height){
+        snapCanvas.width  = canvas.width;
+        snapCanvas.height = canvas.height;
+      }
       snapCtx.setTransform(1, 0, 0, 1, 0, 0);
+      snapCtx.clearRect(0, 0, snapCanvas.width, snapCanvas.height);
       snapCtx.drawImage(canvas, 0, 0);
     }
     drawLens();
