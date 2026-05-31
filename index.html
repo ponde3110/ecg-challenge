@@ -375,29 +375,6 @@ body{background:#050508;color:#fff;font-family:'Courier New',monospace;overflow-
 
 </div>
 <script>
-// ===== 一時デバッグ：iPadでのエラーを画面に表示 =====
-window.addEventListener('error', function(e){
-  let box = document.getElementById('__errbox');
-  if(!box){
-    box = document.createElement('div');
-    box.id = '__errbox';
-    box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(200,0,0,0.95);color:#fff;font:12px monospace;padding:8px;white-space:pre-wrap;max-height:50vh;overflow:auto;';
-    document.body.appendChild(box);
-  }
-  box.textContent += `ERROR: ${e.message}\n  at ${e.filename}:${e.lineno}:${e.colno}\n`;
-});
-window.addEventListener('unhandledrejection', function(e){
-  let box = document.getElementById('__errbox');
-  if(!box){
-    box = document.createElement('div');
-    box.id = '__errbox';
-    box.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:rgba(200,0,0,0.95);color:#fff;font:12px monospace;padding:8px;white-space:pre-wrap;max-height:50vh;overflow:auto;';
-    document.body.appendChild(box);
-  }
-  box.textContent += `PROMISE REJECT: ${e.reason}\n`;
-});
-// ===== デバッグここまで =====
-
 // ヒント非表示レベル閾値
 const HINT_HIDE_LEVEL = 3;
 
@@ -2240,9 +2217,10 @@ function drawSpotlight(){
   const {x, y, r} = spotlight;
   const y0 = currentWave.y;
   const wh = currentWave.h;
-  const pad = 20;
-  const top = y0 - pad;
-  const bot = y0 + wh + pad;
+  // 暗闇は心電図エリア内（y0 〜 y0+wh）に厳密に限定する。
+  // 放電管・心臓は心電図の下にあるので、はみ出すと黒い帯になる。
+  const top = y0;
+  const bot = y0 + wh;
 
   // オフスクリーンcanvasを一切使わず、メインcanvasに直接描画する
   // （iOS Safari のオフスクリーンcanvas枯渇問題を根絶）
