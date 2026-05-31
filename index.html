@@ -591,6 +591,11 @@ let dischargeMinX = 0;    // 放電管辺縁（最小値）
 let heartBaseSize = 80;
 let heartX = 0, heartY = -999; // 心臓の中心座標（onload前は-999）
 
+// スポットライト用オフスクリーンcanvas（一度だけ生成して使い回す）
+// 毎フレームnewすると iOS Safari のcanvas上限に達してメインcanvasが壊れる
+const _spotOc  = document.createElement('canvas');
+const _spotOc2 = _spotOc.getContext('2d');
+
 // wave.webp（電離線の代わり）
 const waveImg = new Image();
 function _updateDischargeMinX(){
