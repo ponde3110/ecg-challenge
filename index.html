@@ -512,7 +512,7 @@ const QUESTIONS_RAW = [
   {img:'ecg/59.jpg',answer:'2：1伝導の心房粗動（AFL）',choices:['2：1伝導の心房粗動（AFL）','頻脈性心房細動（rapid AF）','発作性上室頻拍（PSVT）','洞頻脈'],hint:'下壁誘導のノコギリ波形',bpm:150},
   {img:'ecg/60.jpg',answer:'左脚ブロック＋心房細動（AF）',choices:['左脚ブロック＋心房細動（AF）','心室頻拍（VT）','心室細動（VF）','左脚ブロック＋心房粗動（AFL）'],hint:'Pなく絶対不整',bpm:130},
   {img:'ecg/61.jpg',answer:'心房粗動（AFL）＋心室ペーシング',choices:['心房粗動（AFL）＋心室ペーシング','心房粗動（AFL）＋心房ペーシング','心房細動（AF）＋心室ペーシング','心房細動（AF）＋心房ペーシング'],hint:'ノコギリ波形＋QRS直前のスパイク',bpm:70},
-  {img:'ecg/62.jpg',answer:'心室頻拍（VT）＋胸部誘導の低電位差',choices:['心室頻拍（VT）＋胸部誘導の低電位差','心室細動（VF）＋胸部誘導の低電位差','心房細動（AF）＋胸部誘導の低電位差','発作性上室頻拍（PSVT）＋胸部誘導の低電位差'],hint:'全胸部誘導でQRS振幅＜10mm',bpm:160},
+  {img:'ecg/62.jpg',answer:'心室頻拍（VT）＋胸部誘導の低電位差',choices:['心室頻拍（VT）＋胸部誘導の低電位差','心室細動（VF）＋胸部誘導の低電位差','心房細動（AF）＋胸部誘導の低電位差','偽性心室頻拍（俗称）＋胸部誘導の低電位差'],hint:'全胸部誘導でQRS振幅＜10mm',bpm:160},
   {img:'ecg/63.jpg',answer:'3度房室ブロック＋QT延長',choices:['3度房室ブロック＋QT延長','1度房室ブロック＋QT延長','高度房室ブロック＋QT延長','2度房室ブロック＋QT延長'],hint:'PとQRSの関係に注目',bpm:38},
   {img:'ecg/64.jpg',answer:'平低T波',choices:['平低T波','陰性T波','増高T波','二相性T波'],hint:'全Tの振幅が1mm未満',bpm:72},
   {img:'ecg/65.jpg',answer:'発症早期の前壁の急性梗塞（AMI）',choices:['発症早期の前壁の急性梗塞（AMI）','前壁の陳旧性梗塞（OMI）','発症翌々日の前壁の急性梗塞（AMI）','発症翌日の前壁の急性梗塞（AMI）'],hint:'本例は直後に心室細動（VF）',bpm:90},
@@ -527,16 +527,16 @@ const QUESTIONS_RAW = [
   {img:'ecg/74.jpg',answer:'心室二段脈＋前壁の陳旧性梗塞（OMI）',choices:['心室二段脈＋前壁の陳旧性梗塞（OMI）','心室二段脈＋下壁の陳旧性梗塞（OMI）','心室二段脈＋側壁の陳旧性梗塞（OMI）','心室二段脈＋後壁の陳旧性梗塞（OMI）'],hint:'自己波と期外収縮を分けて診断',bpm:75},
   {img:'ecg/75.jpg',answer:'左房拡大＋左室肥大',choices:['左房拡大＋左室肥大','左房拡大＋右室肥大','右房拡大＋左室肥大','右房拡大＋右室肥大'],hint:'V1の陰性Pに注目',bpm:72},
   {img:'ecg/76.jpg',answer:'右胸心',choices:['右胸心','正中心','左胸心（正常）','異位心'],hint:'本例は完全内臓逆位',bpm:72},
-  {img:'ecg/77.jpg',answer:'非伝導性の心房期外収縮（PAC）',choices:['非伝導性の心房期外収縮（PAC）','洞停止','洞不全','2度房室ブロック'],hint:'ST上のPを見逃さない',bpm:72},
+  {img:'ecg/77.jpg',answer:'非伝導性の心房期外収縮（PAC）',choices:['非伝導性の心房期外収縮（PAC）','洞停止','洞不全','2度房室ブロック'],hint:'V1のQRS直後のPを見逃さない',bpm:72},
   {img:'ecg/78.jpg',answer:'洞房ブロック',choices:['洞房ブロック','洞停止','非伝導性の心房期外収縮（PAC）','2度房室ブロック'],hint:'長いRR間隔が通常の2倍',bpm:55},
   {img:'ecg/79.jpg',answer:'右脚ブロック＋下壁の陳旧性梗塞（OMI）',choices:['右脚ブロック＋下壁の陳旧性梗塞（OMI）','右脚ブロック＋前壁の陳旧性梗塞（OMI）','右脚ブロック＋側壁の陳旧性梗塞（OMI）','右脚ブロック＋後壁の陳旧性梗塞（OMI）'],hint:'異常Q波は常に探しに行く',bpm:68},
-  {img:'ecg/80.jpg',answer:'心室頻拍（VT）＋左脚ブロック',choices:['心室頻拍（VT）＋左脚ブロック','心室頻拍（VT）＋右脚ブロック','心室細動（VT）＋左脚ブロック','心室細動（VT）＋右脚ブロック'],hint:'不整脈と自己波を分けて診断',bpm:160},
+  {img:'ecg/80.jpg',answer:'心室頻拍（VT）＋左脚ブロック',choices:['心室頻拍（VT）＋左脚ブロック','心室頻拍（VT）＋右脚ブロック','心室細動（VF）＋左脚ブロック','心室細動（VF）＋右脚ブロック'],hint:'不整脈と自己波を分けて診断',bpm:160},
   {img:'ecg/81.jpg',answer:'心房細動（AF）＋3度房室ブロック',choices:['心房細動（AF）＋3度房室ブロック','心房細動（AF）＋2度房室ブロック','心房粗動（AFL）＋3度房室ブロック','心房粗動（AFL）＋2度房室ブロック'],hint:'心房細動（AF）＋規則正しいRR',bpm:38},
   {img:'ecg/82.jpg',answer:'下壁の急性梗塞（AMI）＋右脚ブロック',choices:['下壁の急性梗塞（AMI）＋右脚ブロック','下壁の急性梗塞（AMI）＋左脚ブロック','下壁の陳旧性梗塞（OMI）＋左脚ブロック','下壁の陳旧性梗塞（OMI）＋右脚ブロック'],hint:'ST上昇は常に探しに行く',bpm:70},
   {img:'ecg/83.jpg',answer:'右脚ブロック＋1度房室ブロック',choices:['右脚ブロック＋1度房室ブロック','右脚ブロック＋2度房室ブロック','右脚ブロック＋高度房室ブロック','右脚ブロック＋3度房室ブロック'],hint:'PQ延長は見落としやすい',bpm:65},
   {img:'ecg/84.jpg',answer:'発作性の心房細動（AF）',choices:['発作性の心房細動（AF）','持続性の心房細動（AF）','永続性の心房細動（AF）','心房粗動（AFL）'],hint:'心房期外収縮（PAC）がトリガー',bpm:130},
   {img:'ecg/85.jpg',answer:'後壁の急性梗塞（AMI）',choices:['後壁の急性梗塞（AMI）','前壁の急性梗塞（AMI）','下壁の急性梗塞（AMI）','側壁の急性梗塞（AMI）'],hint:'V1-3波形を上下反転',bpm:75},
-  {img:'ecg/86.jpg',answer:'トルサード・ド・ポアント',choices:['トルサード・ド・ポアント','心室細動（VF）','心室頻拍（VT）','偽性心室頻拍（俗称）'],hint:'QT延長を伴い自然停止',bpm:220},
+  {img:'ecg/86.jpg',answer:'トルサード・ド・ポアント',choices:['トルサード・ド・ポアント','発作性上室頻拍（PSVT）','頻脈性心房細動（rapid AF)','偽性心室頻拍（俗称）'],hint:'QT延長を伴い自然停止',bpm:240},
   {img:'ecg/87.jpg',answer:'心室粗動',choices:['心室粗動','心室細動（VF）','心室頻拍（VT）','トルサード・ド・ポアント'],hint:'心室頻拍（VT）は120～250回／分',bpm:300},
   {img:'ecg/88.jpg',answer:'後壁の陳旧性梗塞（OMI）',choices:['後壁の陳旧性梗塞（OMI）','下壁の陳旧性梗塞（OMI）','側壁の陳旧性梗塞（OMI）','前壁の陳旧性梗塞（OMI）'],hint:'V1-2の高いRとT増高',bpm:72},
   {img:'ecg/89.jpg',answer:'WPW症候群',choices:['WPW症候群','左脚ブロック','心室期外収縮（PVC）','LGL症候群'],hint:'不顕性から顕性へ変化',bpm:78},
@@ -545,11 +545,11 @@ const QUESTIONS_RAW = [
   {img:'ecg/92.jpg',answer:'下壁の急性梗塞（AMI）＋心房細動＋3度ブロック',choices:['下壁の急性梗塞（AMI）＋心房細動＋3度ブロック','下壁の急性梗塞（AMI）＋心房細動＋2度ブロック','下壁の急性梗塞（AMI）＋心房細動＋1度ブロック','下壁の急性梗塞（AMI）＋心房細動＋高度ブロック'],hint:'意外によくある組合せ',bpm:38},
   {img:'ecg/93.jpg',answer:'冠静脈洞調律',choices:['冠静脈洞調律','多源性心房頻拍（MAT）','移動性ペースメーカ','正常洞調律'],hint:'下壁誘導で陰性P',bpm:55},
   {img:'ecg/94.jpg',answer:'前壁の急性梗塞（AMI）＋右脚ブロック',choices:['前壁の急性梗塞（AMI）＋右脚ブロック','後壁の急性梗塞（AMI）＋右脚ブロック','側壁の急性梗塞（AMI）＋右脚ブロック','下壁の急性梗塞（AMI）＋右脚ブロック'],hint:'右脚ブロックに惑わされない',bpm:88},
-  {img:'ecg/95.jpg',answer:'前壁と下壁の陳旧性梗塞（OMI）',choices:['前壁と下壁の陳旧性梗塞（OMI）','前壁と側壁の陳旧性梗塞（OMI）','前壁と後壁の陳旧性梗塞（OMI）','前壁と下壁の急性梗塞（AMI）'],hint:'下壁誘導は意識しないと見落とす',bpm:68},
+  {img:'ecg/95.jpg',answer:'前壁と下壁の陳旧性梗塞（OMI）',choices:['前壁と下壁の陳旧性梗塞（OMI）','前壁と側壁の陳旧性梗塞（OMI）','前壁と後壁の陳旧性梗塞（OMI）','前壁と下壁の急性梗塞（AMI）'],hint:'R波高の総和が小さい',bpm:68},
   {img:'ecg/96.jpg',answer:'発作性上室頻拍（PSVT）',choices:['発作性上室頻拍（PSVT）','心室頻拍（VT）','心室細動（VF）','偽性心室頻拍（俗称）'],hint:'心室期外収縮（PVC）で心室性は否定的',bpm:180},
   {img:'ecg/97.jpg',answer:'呼吸性変動',choices:['呼吸性変動','冠静脈洞調律','移動性ペースメーカ','洞徐脈'],hint:'通常、心拍数は吸気時に早くなる',bpm:60},
   {img:'ecg/98.jpg',answer:'多源性心房頻拍（MAT）',choices:['移動性ペースメーカ','多源性心房頻拍（MAT）','冠静脈洞調律','洞不整脈'],hint:'3種類以上のPあり',bpm:114},
-  {img:'ecg/99.jpg',answer:'両室ペーシング（心臓再同期療法）',choices:['両室ペーシング（心臓再同期療法）','通常の房室ペーシング','通常の心室ペーシング','左脚ブロック'],hint:'スパイク後にも関わらず狭いQRS',bpm:70},
+  {img:'ecg/99.jpg',answer:'両室ペーシング（心臓再同期療法）',choices:['両室ペーシング（心臓再同期療法）','右室心尖部ペーシング','右房ペーシング','左室ペーシング'],hint:'スパイク後にも関わらず狭いQRS',bpm:70},
   {img:'ecg/100.jpg',answer:'QT延長＋巨大陰性T波',choices:['QT延長＋巨大陰性T波','QT短縮＋巨大陰性T波','QT延長＋増高T波','QT短縮＋増高T波'],hint:'本例はたこつぼ心筋症',bpm:72}
 ];
 
@@ -1662,13 +1662,12 @@ function onWrong(lbl){
   // 正解ラベルをハイライト表示
   labelData.forEach(l=>{ if(l.correct) l.el.classList.add('hit-correct'); });
   // 不正解：放電が心臓に近づく（固定ピクセル）
-  const heartLeft = heartX - heartBaseSize * 0.5;
   const heartLeft2 = heartX - heartBaseSize;
   // 電離線: 不正解で前進（鬼面は1.5倍）
   const _totalRange2 = heartLeft2 - dischargeMinX;
   const _wrongRate = getStageDef().st >= 19 ? 0.225 : 0.15;
   const WRONG_ADVANCE = _totalRange2 * _wrongRate;
-  targetDischargeX = Math.min(heartLeft2 - 2, dischargeX + WRONG_ADVANCE);
+  targetDischargeX = Math.min(heartLeft2 - 1, dischargeX + WRONG_ADVANCE);
   // 赤フラッシュパーティクル（即時）
   for(let i=0;i<30;i++){
     const a=Math.random()*Math.PI*2, spd=2+Math.random()*5;
@@ -1719,8 +1718,6 @@ function gameLoop(ts){
   // 星スクロール：常に更新
   // ecgStarScroll -= dt * 0.025;  // 星削除済み
 
-  // 心臓の実際の左端（heartX - heartBaseSize が正確な左端）
-  const heartLeft = heartX - heartBaseSize;
   if(gameState==='playing' && currentWave && currentWave.alive && currentWave.ready){
     if(!answered){
       // 未回答: 放電が右へ自然前進（鬼面は2倍速）
@@ -1733,12 +1730,15 @@ function gameLoop(ts){
       const diff = targetDischargeX - dischargeX;
       dischargeX += diff * 0.08;
     }
-    // dischargeX または targetDischargeX が心臓左端に届いたらゲームオーバー
-    if((dischargeX >= heartLeft || targetDischargeX >= heartLeft) && !window._goScheduled){
+    // dischargeX（実描画位置）が心臓の左端に触れたらゲームオーバー
+    // heartBaseSize = naturalWidth*0.5/2 = 心臓画像の半幅
+    // よって heartX - heartBaseSize が心臓の正確な左端
+    const heartLeftEdge = heartX - heartBaseSize;
+    if(dischargeX >= heartLeftEdge && !window._goScheduled){
       window._goScheduled = true;
-      dischargeX = Math.min(dischargeX, heartLeft); // 心臓にめり込まない
-      targetDischargeX = dischargeX;
-      answered = true; // 即座に入力ロック
+      dischargeX      = heartLeftEdge; // 心臓にめり込まない
+      targetDischargeX = heartLeftEdge;
+      answered = true;
       gameOver();
     }
   } else if(gameState==='playing' || gameState==='paused'){
@@ -2267,8 +2267,11 @@ function drawSpotlight(){
   ctx.fill();
   ctx.restore();
 
-  // 4) スポット縁のグロー（温かみのある光輪）
+  // 4) スポット縁のグロー（温かみのある光輪）- 心電図エリア内に限定
   ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, top, W, bot - top);
+  ctx.clip();
   const gGlow = ctx.createRadialGradient(x,y,r*0.75, x,y,r*1.2);
   gGlow.addColorStop(0,   'rgba(255,220,120,0)');
   gGlow.addColorStop(0.5, 'rgba(255,200,80,0.13)');
