@@ -2204,10 +2204,18 @@ function updateSpotlight(){
   spotlight.moveTimer++;
   if(spotlight.moveTimer > 90 + Math.random()*60){
     spotlight.moveTimer = 0;
-    const margin = spotlight.r * 0.6;
-    spotlight.tx = margin + Math.random()*(W - margin*2);
-    spotlight.ty = currentWave.y + margin
-                 + Math.random()*(currentWave.h - margin*2);
+    const r = spotlight.r;
+    const marginX = r * 0.6;
+    // 縦方向は円が心電図エリアからはみ出さないよう半径分のマージンを確保
+    const topLimit = currentWave.y + r;
+    const botLimit = currentWave.y + currentWave.h - r;
+    spotlight.tx = marginX + Math.random()*(W - marginX*2);
+    if(botLimit > topLimit){
+      spotlight.ty = topLimit + Math.random()*(botLimit - topLimit);
+    } else {
+      // 心電図が円より低い場合は中央に固定
+      spotlight.ty = currentWave.y + currentWave.h/2;
+    }
   }
 }
 
@@ -2217,15 +2225,11 @@ function drawSpotlight(){
   const {x, y, r} = spotlight;
   const y0 = currentWave.y;
   const wh = currentWave.h;
-  // 暗闇は心電図エリア内（y0 〜 y0+wh）に厳密に限定する。
-  // 放電管・心臓は心電図の下にあるので、はみ出すと黒い帯になる。
-  const top = y0;
-  const bot = y0 + wh;
+  // 暗闇は心電図エリア内（y0 〜 y0+wh）に限定。
+  // 下端の境界線が見えないよう、塗り範囲を画像下端ぴったりに合わせる。
+  const top = Math.floor(y0);
+  const bot = Math.ceil(y0 + wh);
 
-  // オフスクリーンcanvasを一切使わず、メインcanvasに直接描画する
-  // （iOS Safari のオフスクリーンcanvas枯渇問題を根絶）
-  // clip('evenodd') は一部のiOS Safariで不安定なため、
-  // 外側矩形(時計回り)＋内側円(反時計回り)のサブパスで穴を空ける（nonzeroルール）
   ctx.save();
 
   ctx.beginPath();
@@ -2250,11 +2254,7 @@ function drawSpotlight(){
   // 3) 穴の縁を radial グラデーションで自然にぼかす
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(0, top);
-  ctx.lineTo(W, top);
-  ctx.lineTo(W, bot);
-  ctx.lineTo(0, bot);
-  ctx.closePath();
+  ctx.rect(0, top, W, bot - top);
   ctx.clip();
   const gEdge = ctx.createRadialGradient(x, y, r*0.72, x, y, r);
   gEdge.addColorStop(0,    'rgba(0,0,0,0)');
