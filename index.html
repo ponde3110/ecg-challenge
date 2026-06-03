@@ -1266,7 +1266,8 @@ function startCelebration(type, cb, medalNum, btnNum){
   if(_lr2) _lr2.innerHTML = '';
 
   // ── 専用canvas を body 直下に fixed で配置（game-container の高さに依存しない）──
-  const dpr = window.devicePixelRatio || 1;
+  // 花火背景は高精細不要。DPRを1.5上限に抑えてiPadの描画負荷を削減
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
   const cv = document.createElement('canvas');
   cv.id = 'celeb-canvas';
@@ -1343,37 +1344,37 @@ function startCelebration(type, cb, medalNum, btnNum){
     const palette = FW_PALETTES[Math.floor(Math.random()*FW_PALETTES.length)];
     const [mH,mS,mL] = palette.main;
     const [sH,sS,sL] = palette.sub;
-    const count = 100 + Math.floor(Math.random()*50);
+    const count = 40 + Math.floor(Math.random()*16);
     const particles = [];
-    // メインリング（2色交互）
+    // メインリング（2色交互）：色文字列は生成時に1回だけ確定
     for(let i=0;i<count;i++){
       const ang = (Math.PI*2/count)*i;
       const spd = 3.5 + Math.random()*4.5;
       const isMain = i % 2 === 0;
-      const [h,s,l] = isMain ? [mH+(Math.random()-0.5)*15, mS, mL+Math.random()*15]
-                              : [sH+(Math.random()-0.5)*15, sS, sL+Math.random()*15];
+      const h = (isMain ? mH : sH) + (Math.random()-0.5)*15;
+      const s = isMain ? mS : sS;
+      const l = (isMain ? mL : sL) + Math.random()*15;
       particles.push({
         x:rx, y:ry,
         vx:Math.cos(ang)*spd*(0.7+Math.random()*0.6),
         vy:Math.sin(ang)*spd*(0.7+Math.random()*0.6),
-        life:1, decay:0.007+Math.random()*0.007,
-        hue:h, sat:s, lit:l,
-        r:2+Math.random()*2.5, type:'main'
+        life:1, decay:0.008+Math.random()*0.007,
+        color:`hsl(${Math.round(h)},${s}%,${Math.round(Math.min(100,l+18))}%)`,
+        r:2+Math.random()*2, type:'main'
       });
     }
-    // スパーク（白→パレット色に変化）
-    for(let i=0;i<35;i++){
+    // スパーク
+    for(let i=0;i<10;i++){
       const ang = Math.random()*Math.PI*2;
       const spd = 1.5 + Math.random()*3;
       particles.push({
         x:rx, y:ry,
         vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd,
-        life:1, decay:0.018+Math.random()*0.015,
-        hue:mH, sat:80, lit:92, r:1.2+Math.random()*1.8, type:'glitter'
+        life:1, decay:0.02+Math.random()*0.015,
+        color:`hsl(${Math.round(mH)},80%,92%)`, r:1.2+Math.random()*1.5, type:'glitter'
       });
     }
     fireworks.push({particles, done:false});
-    fireworks.push({flash:{x:rx,y:ry,hue:mH,r:70,life:1}, done:false});
   }
 
   let running = true;
@@ -1384,7 +1385,7 @@ function startCelebration(type, cb, medalNum, btnNum){
   function resizeCelebCanvas(){
     const _cvW = window.innerWidth;
     const _cvH = window.innerHeight;
-    const _dpr = window.devicePixelRatio || 1;
+    const _dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     cv.width  = Math.round(_cvW * _dpr);
     cv.height = Math.round(_cvH * _dpr);
     cv.style.width  = _cvW + 'px';
@@ -1465,14 +1466,14 @@ function startCelebration(type, cb, medalNum, btnNum){
     celebLastTs = ts;
     const elapsed = ts - startTs;
 
-    cc.clearRect(0, 0, cW, cH);
+    // 背景塗り（clearRectは不要・fillRectで全画面上書き）
     drawCelebBg();
 
     if(isFinalMedal){
       // ── 花火（5秒間） ──
       if(elapsed < FW_DURATION && elapsed > nextRocketTs){
         launchRocket();
-        nextRocketTs = elapsed + 350 + Math.random()*500;
+        nextRocketTs = elapsed + 500 + Math.random()*550;
       }
 
       // ロケット更新・描画
@@ -1485,38 +1486,16 @@ function startCelebration(type, cb, medalNum, btnNum){
           explodeFirework(rk.x, rk.targetY, rk.hue);
           rockets.splice(i,1); continue;
         }
-        // 軌跡
-        rk.trail.push({x:rk.x, y:rk.y});
-        if(rk.trail.length > 10) rk.trail.shift();
-        // 軌跡描画
-        for(let j=0;j<rk.trail.length;j++){
-          const a = j/rk.trail.length * 0.7;
-          cc.beginPath();
-          cc.arc(rk.trail[j].x, rk.trail[j].y, 1.5, 0, Math.PI*2);
-          cc.fillStyle = `hsla(${rk.hue},100%,88%,${a*0.9})`;
-          cc.fill();
-        }
-        // ロケット本体
+        // ロケット本体のみ（軌跡は省略して負荷削減）
+        cc.globalAlpha = 1;
         cc.beginPath();
-        cc.arc(rk.x, rk.y, 3, 0, Math.PI*2);
-        cc.fillStyle = `hsla(${rk.hue},100%,90%,0.95)`;
+        cc.arc(rk.x, rk.y, 2.5, 0, Math.PI*2);
+        cc.fillStyle = `hsl(${rk.hue},100%,88%)`;
         cc.fill();
       }
 
-      // 爆発パーティクル描画
+      // 爆発パーティクル描画（単色塗りのみ・gradient不使用）
       for(const fw of fireworks){
-        if(fw.flash){
-          // フラッシュ
-          fw.flash.life -= 0.15;
-          if(fw.flash.life <= 0){ fw.done=true; continue; }
-          const fg = cc.createRadialGradient(fw.flash.x,fw.flash.y,0,fw.flash.x,fw.flash.y,fw.flash.r*(1-fw.flash.life+0.5));
-          fg.addColorStop(0, `hsla(${fw.flash.hue},100%,100%,${fw.flash.life})`);
-          fg.addColorStop(0.5, `hsla(${fw.flash.hue},100%,85%,${fw.flash.life*0.6})`);
-          fg.addColorStop(1, 'transparent');
-          cc.beginPath(); cc.arc(fw.flash.x,fw.flash.y,fw.flash.r,0,Math.PI*2);
-          cc.fillStyle=fg; cc.fill();
-          continue;
-        }
         let allDead = true;
         for(const p of fw.particles){
           p.x += p.vx; p.y += p.vy;
@@ -1525,24 +1504,13 @@ function startCelebration(type, cb, medalNum, btnNum){
           p.life -= p.decay;
           if(p.life <= 0) continue;
           allDead = false;
-          cc.save();
-          const alpha = p.type==='glitter' ? Math.abs(Math.sin(p.life*20))*p.life : p.life*p.life;
-          cc.globalAlpha = alpha;
-          if(p.type==='glitter'){
-            // キラキラ
-            cc.fillStyle=`hsl(${p.hue},${p.sat}%,${p.lit}%)`;
-            cc.beginPath(); cc.arc(p.x,p.y,p.r,0,Math.PI*2); cc.fill();
-          } else {
-            // メインパーティクル（グラデーション）
-            const g = cc.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*2.5);
-            g.addColorStop(0, `hsla(${p.hue},${p.sat}%,${Math.min(100,p.lit+35)}%,1)`);
-            g.addColorStop(0.5, `hsla(${p.hue},${p.sat}%,${p.lit}%,0.8)`);
-            g.addColorStop(1, `hsla(${p.hue},${p.sat}%,${p.lit}%,0)`);
-            cc.beginPath(); cc.arc(p.x,p.y,p.r*2.5,0,Math.PI*2);
-            cc.fillStyle=g; cc.fill();
-          }
-          cc.restore();
+          cc.globalAlpha = p.type==='glitter' ? Math.abs(Math.sin(p.life*20))*p.life : p.life*p.life;
+          cc.fillStyle = p.color;
+          cc.beginPath();
+          cc.arc(p.x, p.y, p.r, 0, Math.PI*2);
+          cc.fill();
         }
+        cc.globalAlpha = 1;
         if(allDead) fw.done = true;
       }
       for(let i=fireworks.length-1;i>=0;i--){ if(fireworks[i].done) fireworks.splice(i,1); }
