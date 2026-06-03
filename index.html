@@ -1323,7 +1323,7 @@ function startCelebration(type, cb, medalNum, btnNum){
     const hue = Math.floor(Math.random()*360);
     const spd = 10 + Math.random()*6;
     rockets.push({
-      x:startX, y:cH, vx:0, vy:-spd, // まっすぐ上へ
+      x:startX, y:cH, px:startX, py:cH, vx:0, vy:-spd, // まっすぐ上へ
       targetY, hue, trail:[], exploded:false
     });
   }
@@ -1344,36 +1344,66 @@ function startCelebration(type, cb, medalNum, btnNum){
     const palette = FW_PALETTES[Math.floor(Math.random()*FW_PALETTES.length)];
     const [mH,mS,mL] = palette.main;
     const [sH,sS,sL] = palette.sub;
-    const count = 40 + Math.floor(Math.random()*16);
+    // 花火タイプを抽選：通常 / 大玉 / 柳（willow）
+    const roll = Math.random();
+    const kind = roll < 0.18 ? 'big' : (roll < 0.36 ? 'willow' : 'normal');
+    const ringCount = kind==='big' ? 56 : 40;
     const particles = [];
-    // メインリング（2色交互）：色文字列は生成時に1回だけ確定
-    for(let i=0;i<count;i++){
-      const ang = (Math.PI*2/count)*i;
-      const spd = 3.5 + Math.random()*4.5;
+
+    // ── 外周リング（大きく広がる主役）──
+    for(let i=0;i<ringCount;i++){
+      const ang = (Math.PI*2/ringCount)*i;
+      const spd = (kind==='big' ? 4.5 : 3.5) + Math.random()*4.5;
       const isMain = i % 2 === 0;
       const h = (isMain ? mH : sH) + (Math.random()-0.5)*15;
       const s = isMain ? mS : sS;
       const l = (isMain ? mL : sL) + Math.random()*15;
+      const isWillow = kind==='willow';
       particles.push({
-        x:rx, y:ry,
+        x:rx, y:ry, px:rx, py:ry,
         vx:Math.cos(ang)*spd*(0.7+Math.random()*0.6),
         vy:Math.sin(ang)*spd*(0.7+Math.random()*0.6),
-        life:1, decay:0.008+Math.random()*0.007,
+        life:1, decay:(isWillow?0.005:0.008)+Math.random()*0.006,
         color:`hsl(${Math.round(h)},${s}%,${Math.round(Math.min(100,l+18))}%)`,
-        r:2+Math.random()*2, type:'main'
+        r:(kind==='big'?2.5:2)+Math.random()*2, type:'main',
+        grav: isWillow ? 0.09 : 0.05, trail:true
       });
     }
-    // スパーク
-    for(let i=0;i<10;i++){
-      const ang = Math.random()*Math.PI*2;
-      const spd = 1.5 + Math.random()*3;
+
+    // ── 内周リング（小さく密集 → 球状の立体感）──
+    const innerCount = Math.floor(ringCount*0.6);
+    for(let i=0;i<innerCount;i++){
+      const ang = (Math.PI*2/innerCount)*i + 0.1;
+      const spd = 1.6 + Math.random()*2.4;
+      const h = sH + (Math.random()-0.5)*20;
       particles.push({
-        x:rx, y:ry,
+        x:rx, y:ry, px:rx, py:ry,
+        vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd,
+        life:1, decay:0.012+Math.random()*0.008,
+        color:`hsl(${Math.round(h)},${sS}%,${Math.round(Math.min(100,sL+25))}%)`,
+        r:1.5+Math.random()*1.5, type:'main', grav:0.05, trail:false
+      });
+    }
+
+    // ── きらめくスパーク（白く瞬く）──
+    const sparkN = kind==='big' ? 18 : 12;
+    for(let i=0;i<sparkN;i++){
+      const ang = Math.random()*Math.PI*2;
+      const spd = 1.5 + Math.random()*3.5;
+      particles.push({
+        x:rx, y:ry, px:rx, py:ry,
         vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd,
         life:1, decay:0.02+Math.random()*0.015,
-        color:`hsl(${Math.round(mH)},80%,92%)`, r:1.2+Math.random()*1.5, type:'glitter'
+        color:`hsl(${Math.round(mH)},70%,95%)`, r:1.2+Math.random()*1.5,
+        type:'glitter', grav:0.04, trail:false
       });
     }
+
+    // 中心フラッシュ（1個だけ・安価な多重円で表現）
+    fireworks.push({
+      flash:{x:rx, y:ry, hue:mH, life:1, r:(kind==='big'?34:24)},
+      done:false
+    });
     fireworks.push({particles, done:false});
   }
 
@@ -1473,46 +1503,89 @@ function startCelebration(type, cb, medalNum, btnNum){
       // ── 花火（5秒間） ──
       if(elapsed < FW_DURATION && elapsed > nextRocketTs){
         launchRocket();
-        nextRocketTs = elapsed + 500 + Math.random()*550;
+        nextRocketTs = elapsed + 380 + Math.random()*420;
       }
 
       // ロケット更新・描画
       for(let i=rockets.length-1;i>=0;i--){
         const rk = rockets[i];
         if(rk.exploded){ rockets.splice(i,1); continue; }
+        rk.px = rk.x; rk.py = rk.y;
         rk.x += rk.vx; rk.y += rk.vy;
         // 目標Y座標に達したら爆発
         if(rk.y <= rk.targetY){
           explodeFirework(rk.x, rk.targetY, rk.hue);
           rockets.splice(i,1); continue;
         }
-        // ロケット本体のみ（軌跡は省略して負荷削減）
+        // 上昇する尾（線分1本・安価）
+        cc.globalAlpha = 0.8;
+        cc.strokeStyle = `hsl(${rk.hue},100%,80%)`;
+        cc.lineWidth = 2;
+        cc.beginPath();
+        cc.moveTo(rk.px, rk.py + 8);
+        cc.lineTo(rk.x, rk.y);
+        cc.stroke();
+        // ロケット本体
         cc.globalAlpha = 1;
         cc.beginPath();
         cc.arc(rk.x, rk.y, 2.5, 0, Math.PI*2);
-        cc.fillStyle = `hsl(${rk.hue},100%,88%)`;
+        cc.fillStyle = '#fff';
         cc.fill();
       }
 
-      // 爆発パーティクル描画（単色塗りのみ・gradient不使用）
+      // ── 爆発描画（加算合成で光が重なって華やか）──
+      cc.globalCompositeOperation = 'lighter';
       for(const fw of fireworks){
+        // 中心フラッシュ（多重円・gradient不使用）
+        if(fw.flash){
+          const fl = fw.flash;
+          fl.life -= 0.08;
+          if(fl.life <= 0){ fw.done = true; continue; }
+          const baseR = fl.r * (1.6 - fl.life);
+          // 3重の同心円で柔らかい光球を擬似的に表現
+          cc.fillStyle = `hsl(${Math.round(fl.hue)},100%,95%)`;
+          cc.globalAlpha = fl.life * 0.5;
+          cc.beginPath(); cc.arc(fl.x, fl.y, baseR, 0, Math.PI*2); cc.fill();
+          cc.globalAlpha = fl.life * 0.35;
+          cc.beginPath(); cc.arc(fl.x, fl.y, baseR*0.6, 0, Math.PI*2); cc.fill();
+          cc.globalAlpha = fl.life * 0.9;
+          cc.fillStyle = '#fff';
+          cc.beginPath(); cc.arc(fl.x, fl.y, baseR*0.28, 0, Math.PI*2); cc.fill();
+          continue;
+        }
         let allDead = true;
         for(const p of fw.particles){
+          p.px = p.x; p.py = p.y;
           p.x += p.vx; p.y += p.vy;
-          p.vy += 0.05; // 重力
-          p.vx *= 0.98; p.vy *= 0.98;
+          p.vy += p.grav; // 重力
+          p.vx *= 0.97; p.vy *= 0.97;
           p.life -= p.decay;
           if(p.life <= 0) continue;
           allDead = false;
-          cc.globalAlpha = p.type==='glitter' ? Math.abs(Math.sin(p.life*20))*p.life : p.life*p.life;
+          const alpha = p.type==='glitter'
+            ? Math.abs(Math.sin(p.life*22))*p.life
+            : p.life*p.life;
+          cc.globalAlpha = alpha;
+          cc.strokeStyle = p.color;
           cc.fillStyle = p.color;
-          cc.beginPath();
-          cc.arc(p.x, p.y, p.r, 0, Math.PI*2);
-          cc.fill();
+          if(p.trail){
+            // 尾を引く（線分1本）：球状の躍動感
+            cc.lineWidth = p.r;
+            cc.lineCap = 'round';
+            cc.beginPath();
+            cc.moveTo(p.px, p.py);
+            cc.lineTo(p.x, p.y);
+            cc.stroke();
+          } else {
+            cc.beginPath();
+            cc.arc(p.x, p.y, p.r, 0, Math.PI*2);
+            cc.fill();
+          }
         }
-        cc.globalAlpha = 1;
         if(allDead) fw.done = true;
       }
+      cc.globalCompositeOperation = 'source-over';
+      cc.globalAlpha = 1;
       for(let i=fireworks.length-1;i>=0;i--){ if(fireworks[i].done) fireworks.splice(i,1); }
     } else {
       // ── 紙吹雪 ──
