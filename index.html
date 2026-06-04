@@ -778,6 +778,10 @@ function resize(){
     heartY = ecgBottom3 + heartBaseSize + 12;
     heartX = ecgRight3 - hImgW2 / 2 - 4;
     H = Math.ceil(heartY + heartBaseSize + 16);
+    // ゲームオーバーページで心臓の下に最終到達テキストを出す場合は下方向に拡張
+    if(typeof goState !== 'undefined' && goState && goState.showReach){
+      H = Math.max(H, Math.ceil(goReachTextLayout().bottom + 10));
+    }
   } else if(heartBaseSize <= 0){
     // currentWave未ロード時のみ暫定値（spawnWave onload後に正確な値で上書きされる）
     heartBaseSize = Math.min(W * 0.16, 65);
@@ -1723,7 +1727,10 @@ function onWrong(lbl){
   const _totalRange2 = heartLeft2 - dischargeMinX;
   const _wrongRate = getStageDef().st >= 19 ? 0.225 : 0.15;
   const WRONG_ADVANCE = _totalRange2 * _wrongRate;
-  targetDischargeX = Math.min(heartLeft2 - 1, dischargeX + WRONG_ADVANCE);
+  // 上限をかける前の前進先で心臓到達を判定（届くなら心臓左端ぴったりまで伸ばす）
+  const _rawTarget = dischargeX + WRONG_ADVANCE;
+  const goOver = (_rawTarget >= heartLeft2);
+  targetDischargeX = goOver ? heartLeft2 : Math.min(heartLeft2 - 1, _rawTarget);
   // 赤フラッシュパーティクル（即時）
   for(let i=0;i<30;i++){
     const a=Math.random()*Math.PI*2, spd=2+Math.random()*5;
@@ -1731,20 +1738,18 @@ function onWrong(lbl){
       life:1,decay:0.02+Math.random()*0.02,color:Math.random()<0.5?'#ff3333':'#ff8844',r:2+Math.random()*4});
   }
   resetCombo();
-  // 400ms待機して電離線が伸びるアニメを見せてから次へ
-  const heartLeftNow = heartX - heartBaseSize;
-  const goOver = (targetDischargeX >= heartLeftNow);
+  if(goOver){
+    // 電離線が心臓に到達する → ゲームループの到達判定が gameOver() を呼び、
+    // 到達と同時に心臓が痙攣する。パネル（不正解=赤／正解=緑）は表示したまま、
+    // gameOver 側で4秒待機してからゲームオーバーページへ移行する。
+    return;
+  }
+  // 通常の不正解：4000ms待機して電離線が伸びるアニメ＋正解表示を見せてから次へ
   setTimeout(()=>{
     // スライム位置を保存（次の心電図で同位置から再開）
     if(slimes.length > 0) _savedSlimes = slimes.map(s=>({...s}));
     if(currentWave) currentWave.alive=false;
-    if(goOver){
-      setTimeout(()=>{
-        if(gameState !== 'gameover') gameOver();
-      }, 300);
-    } else {
-      if(gameState === 'playing') spawnWave(pickQuestion(), false);
-    }
+    if(gameState === 'playing') spawnWave(pickQuestion(), false);
   }, 4000);
 }
 
@@ -1790,7 +1795,9 @@ function gameLoop(ts){
     // heartBaseSize = naturalWidth*0.5/2 = 心臓画像の半幅
     // よって heartX - heartBaseSize が心臓の正確な左端
     const heartLeftEdge = heartX - heartBaseSize;
-    if(dischargeX >= heartLeftEdge && !window._goScheduled){
+    // 自然前進・回答後イージングのどちらでも、電離線が心臓左端に到達した瞬間に発火
+    // （イージングは漸近的に近づくため -0.5px の許容で「到達」とみなす）
+    if(dischargeX >= heartLeftEdge - 0.5 && !window._goScheduled){
       window._goScheduled = true;
       dischargeX      = heartLeftEdge; // 心臓にめり込まない
       targetDischargeX = heartLeftEdge;
@@ -1832,7 +1839,9 @@ drawBg();
 // updateAndDrawEcgShootingStars(dt); // 削除済み
 drawDangerLine();  // 放電管・電離線は常に表示
 drawHeart();       // 心臓は常に表示
-if(gameState !== 'gameover'){
+// ゲームオーバーページ（痙攣4秒経過後）以外では、ゲーム中の画面をそのまま描画し続ける
+const _inGameOverPage = (gameState==='gameover' && goState && goState.panelCleared);
+if(!_inGameOverPage){
   drawWave();
   drawResultMark();
   drawHint();
@@ -1879,7 +1888,7 @@ function drawHeart(){
   // ゲームオーバーシーケンス中の心臓描画
   if(goState){
     const gs = goState;
-    if(gs.phase === 'vf' || gs.phase === 'fadeOut' || gs.phase === 'show'){
+    if(gs.phase === 'panel' || gs.phase === 'vf' || gs.phase === 'fadeOut' || gs.phase === 'show'){
       // VF痙攣: 500bpmのスケール変化＋ランダムなふるえ
       const amp = 4;
       const ox = (Math.random()-0.5)*amp;
@@ -1922,13 +1931,28 @@ function drawHeart(){
 // ──────────────────────────────────────────────────────────────────────────────
 
 
+function goReachTextLayout(){
+  // 痙攣する心臓の下に出す「最終到達面」テキストのレイアウト
+  const heartHalfH = (heartImg.complete && heartImg.naturalWidth > 0)
+    ? heartImg.naturalHeight * 0.5 / 2 : heartBaseSize;
+  const fsHead = Math.max(11, Math.floor(W * 0.040));
+  const fsMain = Math.max(18, Math.floor(W * 0.072));
+  const lineH  = fsMain * 1.32;
+  const headY  = heartY + heartHalfH + 18 + fsHead * 0.5; // 小見出し「最終到達」
+  const faceY  = headY + fsHead * 0.5 + lineH * 0.7;       // 面（例：裏面）
+  const stageY = faceY + lineH;                            // 改行してステージ
+  const bottom = stageY + lineH * 0.6;                     // テキスト下端
+  return { fsHead, fsMain, lineH, headY, faceY, stageY, bottom };
+}
+
 function drawGoStateEffects(){
   if(!goState) return;
   if(gameState !== 'gameover' && !goState.done) return;
   const t = goState.t;
-  if(t < 2000) return;
+  const PANEL_MS = 4000; // パネル表示中はGAME OVERを出さない
+  if(t < PANEL_MS) return;
 
-  const alpha = Math.min(1, (t - 2000) / 400);
+  const alpha = Math.min(1, (t - PANEL_MS) / 400);
   ctx.save();
   ctx.globalAlpha = alpha;
 
@@ -1949,30 +1973,32 @@ function drawGoStateEffects(){
     ctx.fillStyle = 'rgba(255,40,40,1)';
     ctx.fillText('GAME OVER', W/2, heartY - 50);
   }
-  // 「最終到達面」表示（放電線の下）
-  if(t > 2000){
-    const stDef = STAGE_DEFS.find(d => d.st === (typeof _lastStageAtGameOver !== 'undefined' ? _lastStageAtGameOver : 1));
-    if(stDef){
-      const faceLabel = stDef.st >= 19 ? '鬼面' : stDef.st > 9 ? '裏面' : '表面';
-      const dispNum   = stDef.st > 9 && stDef.st < 19 ? stDef.st - 9 : stDef.st;
-      const stageNum  = `　ステージ${dispNum}`;
-      const lineBreak = '\n';
-      const reachText1 = '最終到達';
-      const reachText2 = `${faceLabel}${stageNum}`;
-      const reachAlpha = Math.min(1, (t - 2000) / 600);
-      ctx.save();
-      ctx.globalAlpha = reachAlpha;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = `bold ${Math.floor(W*0.062)}px "Helvetica Neue","Hiragino Sans",sans-serif`;
-      ctx.fillStyle = 'rgba(255,200,100,0.9)';
-      ctx.shadowColor = 'rgba(255,160,0,0.5)';
-      ctx.shadowBlur = 8;
-      const lineH = Math.floor(W*0.062) * 1.5;
-      ctx.fillText(reachText1, W/2, heartY + 90);
-      ctx.fillText(reachText2, W/2, heartY + 90 + lineH);
-      ctx.restore();
-    }
+  // 「最終到達面」表示（痙攣する心臓の下に、面とステージを改行して表示）
+  const stDef = STAGE_DEFS.find(d => d.st === (typeof _lastStageAtGameOver !== 'undefined' ? _lastStageAtGameOver : 1));
+  if(stDef){
+    const faceLabel = stDef.st >= 19 ? '鬼面' : stDef.st > 9 ? '裏面' : '表面';
+    const dispNum   = stDef.st > 9 && stDef.st < 19 ? stDef.st - 9 : stDef.st;
+    const L = goReachTextLayout();
+    const reachAlpha = Math.min(1, (t - PANEL_MS) / 600);
+    ctx.save();
+    ctx.globalAlpha = reachAlpha;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // 小見出し「最終到達」
+    ctx.font = `bold ${L.fsHead}px "Helvetica Neue","Hiragino Sans",sans-serif`;
+    ctx.fillStyle = 'rgba(255,200,100,0.7)';
+    ctx.shadowColor = 'rgba(255,160,0,0.4)';
+    ctx.shadowBlur = 6;
+    ctx.fillText('最終到達', W/2, L.headY);
+    // 面（例：裏面）
+    ctx.font = `bold ${L.fsMain}px "Helvetica Neue","Hiragino Sans",sans-serif`;
+    ctx.fillStyle = 'rgba(255,212,120,0.95)';
+    ctx.shadowColor = 'rgba(255,160,0,0.55)';
+    ctx.shadowBlur = 10;
+    ctx.fillText(faceLabel, W/2, L.faceY);
+    // 改行してステージ
+    ctx.fillText(`ステージ${dispNum}`, W/2, L.stageY);
+    ctx.restore();
   }
 
   ctx.restore();
@@ -2390,24 +2416,17 @@ function gameOver(){
   gameState='gameover';
   window._lastStageAtGameOver = getStageDef().st; // 到達ステージを保存
   stopCursor();
-  // 不要な要素を即クリア・非表示
-  labelsRow.innerHTML='';
-  hintArea.classList.add('hidden');
-  // ※ display:none ではなく visibility:hidden を使う。
-  //   display:none は game-container(flex) の高さを変えて reflow を起こし、
-  //   ecgArea のサイズ→W/H/heartX/heartY が変わって放電管・心臓の位置がずれるため。
-  const cp = document.getElementById('control-panel');
-  if(cp) cp.style.visibility = 'hidden';
-  // HUDを非表示
-  const uiGoEl = document.getElementById('ui');
-  if(uiGoEl) uiGoEl.style.visibility = 'hidden';
-  slimes = [];
-  spotlight = null;
-  particles_arr = [];
+  // ── ゲーム中の画面（心電図・ヒント・HUD・パネル）はそのまま表示し、心臓だけ4秒痙攣させる ──
+  // 正解ラベルを緑に（不正解時は onWrong で赤/緑が既にセット済み。自然到達時はここで初めて緑化）
+  labelData.forEach(l=>{
+    l.el.classList.remove('active');
+    if(l.correct) l.el.classList.add('hit-correct');
+  });
   window._goScheduled = false;
 
-  goState = { phase:'show', t:0 };
-  if(currentWave) currentWave.alive = false;
+  // phase:'panel' = 痙攣＋ゲーム画面表示の4秒間。クリックは gameState!=='playing' で無効化済み
+  // ※ 心電図/ヒント/HUD/スライム等は消さず、currentWave.alive も true のまま維持して描画を続ける
+  goState = { phase:'panel', t:0 };
 }
 
 // ゲームオーバー描画（gameLoop内で呼ばれる）
@@ -2415,8 +2434,9 @@ function updateGoState(dt){
   if(!goState) return;
   goState.t += dt;
   const t = goState.t;
+  const PANEL_MS = 4000; // 痙攣＋パネル表示（赤/緑）の時間。経過後にゲームオーバーページへ
 
-  // 心臓を痙攣させる（500bpm相当）
+  // 心臓を痙攣させる（500bpm相当）— 到達と同時に即開始
   const vfInterval = 60000 / 500; // 120ms
   if(t - (goState.lastBeat||0) >= vfInterval){
     goState.lastBeat = t;
@@ -2424,13 +2444,28 @@ function updateGoState(dt){
     heartBeat.t = 0;
   }
 
-  // 2秒後にGAME OVERテキストを表示
-  if(t > 2000 && !goState.textShown){
-    goState.textShown = true;
+  // 4秒経過：ゲーム画面を片付けてゲームオーバーページへ移行
+  if(t >= PANEL_MS && !goState.panelCleared){
+    goState.panelCleared = true;
+    if(currentWave) currentWave.alive = false; // 心電図・ヒント(canvas)描画を停止
+    hintArea.classList.add('hidden');           // ヒント枠(DOM)を非表示
+    const uiGoEl = document.getElementById('ui');
+    if(uiGoEl) uiGoEl.style.visibility = 'hidden'; // HUDを非表示
+    slimes = [];
+    spotlight = null;
+    particles_arr = [];
+    labelsRow.innerHTML = '';
+    // control-panel を除去し、心臓の下に「最終到達面」を表示するためキャンバスを下へ拡張
+    const cp = document.getElementById('control-panel');
+    if(cp) cp.style.display = 'none';
+    goState.showReach = true;
+    resize(); // resize内で showReach を加味して H を拡張
+    // resize() は goState 時に放電先端を heartX に寄せるため、心臓左端へ戻す
+    dischargeX = targetDischargeX = heartX - heartBaseSize;
   }
 
-  // 5秒後にトップへ
-  if(t > 8000 && !goState.done){
+  // ゲームオーバーページ（GAME OVER表示）を一定時間見せてからトップへ
+  if(t > PANEL_MS + 4000 && !goState.done){
     goState.done = true;
     gameState = 'idle';
     ctx.clearRect(0,0,W,H);
